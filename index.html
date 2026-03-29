@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Practice Hub</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f4;
+      --bg3: #f0ede8;
+      --text: #1a1a1a;
+      --text2: #555;
+      --text3: #888;
+      --border: rgba(0, 0, 0, 0.12);
+      --border2: rgba(0, 0, 0, 0.22);
+      --radius: 10px;
+      --radius-lg: 14px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+      --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    @media(prefers-color-scheme:dark) {
+      :root {
+        --bg: #1c1c1e;
+        --bg2: #2c2c2e;
+        --bg3: #3a3a3c;
+        --text: #f2f2f7;
+        --text2: #aeaeb2;
+        --text3: #636366;
+        --border: rgba(255, 255, 255, 0.1);
+        --border2: rgba(255, 255, 255, 0.2);
+        --shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    html {
+      font-size: 15px;
+      font-family: var(--font);
+      background: var(--bg3);
+      color: var(--text);
+      min-height: 100vh
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg3)
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh
+    }
+
+    .screen.active {
+      display: block
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 16px
+    }
+
+    /* TOPBAR */
+    .topbar {
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 500;
+      flex: 1
+    }
+
+    .topbar-sub {
+      font-size: 12px;
+      color: var(--text2);
+      flex: 1
+    }
+
+    .back-btn,
+    .icon-btn {
+      background: transparent;
+      border: 0.5px solid var(--border2);
+      color: var(--text2);
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--font)
+    }
+
+    .back-btn:hover,
+    .icon-btn:hover {
+      background: var(--bg2)
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      margin-bottom: 12px
+    }
+
+    .card-accent {
+      border-left: 2.5px solid var(--accent, #888)
+    }
+
+    .label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .9px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 8px
+    }
+
+    /* BUTTONS */
+    .btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s, transform .1s
+    }
+
+    .btn:active {
+      transform: scale(.97)
+    }
+
+    .btn-primary {
+      background: var(--accent, #378ADD);
+      color: #fff
+    }
+
+    .btn-primary:disabled {
+      opacity: .4;
+      cursor: default
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
+      border: 0.5px solid var(--border2)
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg2)
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px
+    }
+
+    /* BADGE */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 9px;
+      border-radius: 99px;
+      background: rgba(128, 128, 128, .12);
+      color: var(--text2)
+    }
+
+    /* INPUTS */
+    input,
+    select,
+    textarea {
+      font-family: var(--font);
+      font-size: 13px;
+      background: var(--bg2);
+      color: var(--text);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color .15s
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent, #378ADD)
+    }
+
+    textarea {
+      resize: vertical;
+      line-height: 1.7
+    }
+
+    select option {
+      background: var(--bg)
+    }
+
+    .form-group {
+      margin-bottom: 16px
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      margin-bottom: 6px
+    }
+
+    /* MODULE GRID */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      padding: 16px 0
+    }
+
+    .mod-card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      border-top: 2px solid var(--mod-accent)
+    }
+
+    .mod-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow)
+    }
+
+    .mod-card .emoji {
+      font-size: 18px;
+      margin-bottom: 8px
+    }
+
+    .mod-card .mod-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.3
+    }
+
+    .mod-card .mod-sub {
+      font-size: 11px;
+      color: var(--text3);
+      margin-bottom: 10px
+    }
+
+    .mod-card .mod-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 9px;
+      border-radius: 99px;
+      background: var(--mod-accent-light);
+      color: var(--mod-accent)
+    }
+
+    .mod-card .mod-stats {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 7px
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      display: flex;
+      gap: 24px
+    }
+
+    .stat {
+      text-align: center
+    }
+
+    .stat-val {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text)
+    }
+
+    .stat-lbl {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 1px
+    }
+
+    /* PROBLEM */
+    pre.problem-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+      font-family: var(--font);
+      margin: 0
+    }
+
+    pre.code-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      line-height: 1.75;
+      color: var(--text);
+      font-family: var(--mono);
+      margin: 0
+    }
+
+    .hint-box {
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      background: var(--bg2);
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.65;
+      border-left: 2px solid var(--border2)
+    }
+
+    /* FEEDBACK SCORE */
+    .score-big {
+      text-align: center;
+      padding: 28px 20px
+    }
+
+    .score-num {
+      font-size: 64px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--score-color, #639922)
+    }
+
+    .score-verdict {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      margin: 10px 0 7px
+    }
+
+    .score-feedback {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      max-width: 480px;
+      margin: 0 auto
+    }
+
+    .score-tip {
+      margin-top: 14px;
+      padding: 9px 16px;
+      background: var(--bg2);
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--text2);
+      display: inline-block;
+      max-width: 520px
+    }
+
+    /* SETTINGS */
+    .settings-wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 16px
+    }
+
+    .settings-wrap h2 {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 6px
+    }
+
+    .settings-wrap p {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 24px
+    }
+
+    .provider-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px
+    }
+
+    .provider-opt {
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 12px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color .15s
+    }
+
+    .provider-opt.selected {
+      border: 2px solid var(--accent, #378ADD);
+      background: rgba(55, 138, 221, .07)
+    }
+
+    .provider-opt .pname {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text)
+    }
+
+    .provider-opt .pfree {
+      font-size: 10px;
+      color: #639922;
+      margin-top: 3px
+    }
+
+    .provider-opt .pnote {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 2px
+    }
+
+    .info-box {
+      background: var(--bg2);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.75;
+      margin-bottom: 16px
+    }
+
+    .info-box a {
+      color: var(--accent, #378ADD);
+      text-decoration: none
+    }
+
+    .info-box a:hover {
+      text-decoration: underline
+    }
+
+    /* LOADING */
+    .loading-box {
+      text-align: center;
+      padding: 56px 20px
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--accent, #378ADD);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .loading-msg {
+      font-size: 13px;
+      color: var(--text2)
+    }
+
+    .loading-sub {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 5px
+    }
+
+    /* ERROR BOX */
+    .error-box {
+      background: rgba(226, 75, 74, .08);
+      border: 0.5px solid rgba(226, 75, 74, .3);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #A32D2D;
+      line-height: 1.65;
+      margin-bottom: 14px
+    }
+
+    /* FOOTER NOTE */
+    .footer-note {
+      text-align: center;
+      padding: 16px;
+      font-size: 11px;
+      color: var(--text3)
+    }
+
+    /* HOME HEADER */
+    .home-header {
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .home-header .ht {
+      font-size: 17px;
+      font-weight: 500
+    }
+
+    .home-header .hd {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 2px
+    }
+
+    /* PROGRESS BAR */
+    .progress-bar-wrap {
+      height: 4px;
+      background: var(--bg3);
+      border-radius: 99px;
+      margin-top: 8px;
+      overflow: hidden
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .4s
+    }
+
+    /* TOPIC BADGE */
+    .topic-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 3px 11px;
+      border-radius: 99px;
+      background: var(--bg2);
+      color: var(--text3);
+      border: 0.5px solid var(--border);
+      margin-bottom: 12px
+    }
+
+    /* SKIP ANSWER */
+    .answer-reveal {
+      display: none
+    }
+
+    .answer-reveal.visible {
+      display: block
+    }
+
+    /* LEVEL PROGRESS IN MOD HEADER */
+    .mod-header-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      overflow: hidden
+    }
+
+    /* responsive */
+    @media(max-width:500px) {
+      .provider-grid {
+        grid-template-columns: 1fr
+      }
+
+      .stats-bar {
+        gap: 16px
+      }
+
+      .stat-val {
+        font-size: 16px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════════ SETTINGS SCREEN ═══════════════ -->
+  <div id="screen-settings" class="screen">
+    <div class="settings-wrap">
+      <h2>Welcome to Daily Practice Hub</h2>
+      <p>Choose an AI provider and paste your API key to get started. All data is saved locally in your browser. You
+        only need internet to generate problems.</p>
+
+      <div class="form-group">
+        <label>AI Provider</label>
+        <div class="provider-grid">
+          <div class="provider-opt selected" data-provider="gemini" onclick="selectProvider('gemini',this)">
+            <div class="pname">Google Gemini</div>
+            <div class="pfree">Free tier available</div>
+            <div class="pnote">gemini-2.0-flash-lite</div>
+          </div>
+          <div class="provider-opt" data-provider="groq" onclick="selectProvider('groq',this)">
+            <div class="pname">Groq</div>
+            <div class="pfree">Free tier</div>
+            <div class="pnote">Llama 3.3 70B</div>
+          </div>
+          <div class="provider-opt" data-provider="openrouter" onclick="selectProvider('openrouter',this)">
+            <div class="pname">OpenRouter</div>
+            <div class="pfree">Free models</div>
+            <div class="pnote">Various models</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="provider-info" class="info-box"></div>
+
+      <div class="form-group">
+        <label id="key-label">API Key</label>
+        <input type="password" id="api-key-input" placeholder="Paste your API key here..." autocomplete="off" />
+      </div>
+
+      <div class="form-group">
+        <label>Model <span style="color:var(--text3);font-weight:400">(optional — leave blank to use
+            default)</span></label>
+        <input type="text" id="model-input" placeholder="e.g. gemini-2.0-flash-lite" />
+      </div>
+
+      <div id="settings-error" class="error-box" style="display:none"></div>
+
+      <button class="btn btn-primary" style="--accent:#378ADD;width:100%;font-size:14px;padding:11px"
+        onclick="saveSettings()">Save &amp; Start Practising →</button>
+
+      <div style="margin-top:16px;font-size:12px;color:var(--text3);line-height:1.75;text-align:center">
+        Your API key is stored only in this browser's localStorage — it never leaves your device except to call the
+        provider directly.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HOME SCREEN ═══════════════ -->
+  <div id="screen-home" class="screen">
+    <div class="home-header">
+      <div>
+        <div class="ht">Daily Practice Hub</div>
+        <div class="hd" id="home-date"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="stats-bar">
+          <div class="stat">
+            <div class="stat-val" id="stat-streak">0</div>
+            <div class="stat-lbl">Streak 🔥</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="stat-solved">0</div>
+            <div class="stat-lbl">Solved</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="stat-mods">0/10</div>
+            <div class="stat-lbl">Modules</div>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="showScreen('settings')" title="Settings">⚙</button>
+      </div>
+    </div>
+    <div class="container">
+      <div class="module-grid" id="module-grid"></div>
+      <div class="footer-note">Click any module to practice · Score ≥80% levels up · Ctrl+Enter to submit answers</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PROBLEM SCREEN ═══════════════ -->
+  <div id="screen-problem" class="screen">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Home</button>
+      <div class="mod-header-info">
+        <span id="prob-emoji" style="font-size:16px"></span>
+        <span id="prob-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
+        <span id="prob-levelbadge" class="badge"></span>
+      </div>
+      <button class="icon-btn" onclick="newProblem()">New 🔄</button>
+    </div>
+
+    <div class="container" style="padding-top:16px;padding-bottom:32px">
+
+      <!-- Loading -->
+      <div id="prob-loading" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-msg">Generating your problem…</div>
+        <div class="loading-sub">A fresh applied problem is being crafted for you</div>
+      </div>
+
+      <!-- Error -->
+      <div id="prob-error" class="error-box" style="display:none"></div>
+
+      <!-- Problem content -->
+      <div id="prob-content" style="display:none">
+        <div id="prob-topic" class="topic-tag"></div>
+
+        <!-- Statement card -->
+        <div class="card card-accent" id="prob-card" style="--accent:#378ADD">
+          <div class="label">Problem</div>
+          <pre id="prob-statement" class="problem-text"></pre>
+        </div>
+
+        <!-- Hint -->
+        <div style="margin-bottom:14px">
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="toggleHint()">Show hint
+            💡</button>
+          <div id="hint-box" class="hint-box" style="display:none;margin-top:8px"></div>
+        </div>
+
+        <!-- Answer shown after skip -->
+        <div id="answer-reveal" class="answer-reveal">
+          <div class="card card-accent" style="--accent:#639922">
+            <div class="label">Correct Answer</div>
+            <pre id="reveal-answer" class="problem-text"></pre>
+            <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border)">
+              <span style="font-weight:500;color:var(--text)">Explanation: </span>
+              <span id="reveal-explanation" style="font-size:13px;color:var(--text2);line-height:1.75"></span>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="newProblem()">Next problem →</button>
+            <button class="btn btn-ghost" onclick="goHome()">← Home</button>
+          </div>
+        </div>
+
+        <!-- Answer input -->
+        <div id="answer-section" class="card">
+          <div class="label">Your Answer</div>
+          <textarea id="answer-input" rows="6" placeholder="Type your answer here… (Ctrl+Enter to submit)"
+            onkeydown="handleKey(event)"></textarea>
+          <div id="answer-error" class="error-box" style="display:none;margin-top:10px"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="submit-btn" onclick="submitAnswer()">Submit answer</button>
+            <button class="btn btn-ghost" onclick="skipProblem()">Skip / see answer</button>
+            <button class="btn btn-ghost" onclick="newProblem()">New problem 🔄</button>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text3)">Ctrl+Enter to submit quickly</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FEEDBACK SCREEN ═══════════════ -->
+  <div id="screen-feedback" class="screen">
+    <div class="topbar">
+      <button class="back-btn" onclick="goHome()">← Home</button>
+      <div class="mod-header-info">
+        <span id="fb-emoji" style="font-size:16px"></span>
+        <span id="fb-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
+        <span style="font-size:13px;color:var(--text3)">— Result</span>
+      </div>
+    </div>
+
+    <div class="container" style="padding-top:16px;padding-bottom:32px">
+      <!-- Loading eval -->
+      <div id="fb-loading" class="loading-box" style="display:none">
+        <div class="spinner"></div>
+        <div class="loading-msg">Evaluating your answer…</div>
+      </div>
+
+      <div id="fb-content" style="display:none">
+        <!-- Score card -->
+        <div class="card" id="fb-score-card">
+          <div class="score-big">
+            <div class="score-num" id="fb-score-num"></div>
+            <div class="score-verdict" id="fb-verdict"></div>
+            <div class="score-feedback" id="fb-feedback-text"></div>
+            <div class="score-tip" id="fb-tip" style="display:none"></div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="fb-progress-bar" style="background:#639922;width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Your answer -->
+        <div class="card">
+          <div class="label">Your answer</div>
+          <pre id="fb-your-answer" class="problem-text" style="color:var(--text2)"></pre>
+        </div>
+
+        <!-- Correct answer -->
+        <div class="card card-accent" id="fb-answer-card" style="--accent:#639922">
+          <div class="label">Correct answer</div>
+          <pre id="fb-correct-answer" class="problem-text"></pre>
+        </div>
+
+        <!-- Explanation -->
+        <div class="card">
+          <div class="label">Explanation</div>
+          <pre id="fb-explanation" class="problem-text" style="color:var(--text2)"></pre>
+        </div>
+
+        <div class="btn-row" style="padding-bottom:8px">
+          <button class="btn btn-primary" id="fb-next-btn" onclick="newProblem()">Next problem →</button>
+          <button class="btn btn-ghost" onclick="goHome()">← Back to home</button>
+        </div>
+      </div>
+
+      <div id="fb-error" class="error-box" style="display:none"></div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════
+    //  DATA
+    // ═══════════════════════════════════════════════════
+    const MODULES = [
+      { id: 0, name: "Exercise & Mental", emoji: "🏋️", accent: "#D85A30", sub: "Workout · Chess · Riddles" },
+      { id: 1, name: "SQL", emoji: "🗄️", accent: "#378ADD", sub: "Queries · Joins · Aggregations" },
+      { id: 2, name: "Excel", emoji: "📊", accent: "#639922", sub: "Formulas · Functions · Analysis" },
+      { id: 3, name: "Power BI / Tableau", emoji: "📈", accent: "#7F77DD", sub: "DAX · Calculated Fields · Viz" },
+      { id: 4, name: "Python", emoji: "🐍", accent: "#1D9E75", sub: "Coding & Problem Solving" },
+      { id: 5, name: "Quant Aptitude", emoji: "🔢", accent: "#BA7517", sub: "Math · Word Problems · MCQ" },
+      { id: 6, name: "LR & Data Interpretation", emoji: "🧩", accent: "#D4537E", sub: "Logic · Patterns · DI Tables" },
+      { id: 7, name: "General Science", emoji: "🔬", accent: "#185FA5", sub: "Physics · Chemistry · Biology" },
+      { id: 8, name: "Current Affairs & GK", emoji: "🌐", accent: "#A32D2D", sub: "UPSC · GPSC · RPSC Level" },
+      { id: 9, name: "GATE CS", emoji: "💻", accent: "#534AB7", sub: "COA · OS · CN · DSA" },
+    ];
+
+    const LEVEL_LABELS = ["", "Beginner", "Beginner+", "Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert", "Master"];
+    const CODE_MODULES = new Set([1, 2, 3, 4, 9]);
+
+    function getLevelLabel(l) { return LEVEL_LABELS[Math.min(10, Math.round(l))]; }
+
+    // ═══════════════════════════════════════════════════
+    //  STATE  (persisted in localStorage)
+    // ═══════════════════════════════════════════════════
+    function loadState() {
+      return {
+        levels: JSON.parse(localStorage.getItem('dph_levels') || JSON.stringify(MODULES.map(() => 1))),
+        attempts: JSON.parse(localStorage.getItem('dph_attempts') || JSON.stringify(MODULES.map(() => 0))),
+        scores: JSON.parse(localStorage.getItem('dph_scores') || JSON.stringify(MODULES.map(() => 0))),
+        streak: parseInt(localStorage.getItem('dph_streak') || '0'),
+      };
+    }
+    function saveState(s) {
+      localStorage.setItem('dph_levels', JSON.stringify(s.levels));
+      localStorage.setItem('dph_attempts', JSON.stringify(s.attempts));
+      localStorage.setItem('dph_scores', JSON.stringify(s.scores));
+      localStorage.setItem('dph_streak', String(s.streak));
+    }
+
+    let S = loadState();
+    let currentMod = null;
+    let currentProblem = null;
+    let lastAnswer = '';
+
+    // ═══════════════════════════════════════════════════
+    //  API
+    // ═══════════════════════════════════════════════════
+    const PROVIDER_DEFAULTS = {
+      gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}', model: 'gemini-2.5-flash' },
+      groq: { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' },
+      openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.1-8b-instruct:free' },
+    };
+
+    async function callAI(systemPrompt, userMsg, maxTokens = 3000) {
+      const provider = localStorage.getItem('dph_provider') || 'gemini';
+      const key = localStorage.getItem('dph_apiKey') || '';
+      const def = PROVIDER_DEFAULTS[provider];
+      const model = (localStorage.getItem('dph_model') || '').trim() || def.model;
+
+      let raw;
+      if (provider === 'gemini') {
+        const url = def.url.replace('{model}', model).replace('{key}', key);
+        const body = {
+          contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userMsg }] }],
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.9,
+            responseMimeType: "application/json"
+          }
+        };
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.error) {
+          const code = data.error.code ? ` [${data.error.code}]` : '';
+          const status = data.error.status ? ` — ${data.error.status}` : '';
+          throw new Error('Gemini API error' + code + status + ': ' + data.error.message);
+        }
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+          const reason = (data.candidates && data.candidates[0] && data.candidates[0].finishReason) || 'unknown';
+          throw new Error('Gemini returned no content (finishReason: ' + reason + '). Try again or pick a different model.');
+        }
+        raw = data.candidates[0].content.parts[0].text;
+      } else {
+        const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key };
+        if (provider === 'openrouter') {
+          headers['HTTP-Referer'] = 'https://daily-practice-hub.local';
+          headers['X-Title'] = 'Daily Practice Hub';
+        }
+        const body = {
+          model, max_tokens: maxTokens, temperature: 0.9,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }]
+        };
+        const res = await fetch(def.url, { method: 'POST', headers, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)));
+        raw = data.choices[0].message.content;
+      }
+
+      // Strip markdown fences if present
+      return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  SYSTEM PROMPTS
+    // ═══════════════════════════════════════════════════
+    function getSysPrompt(moduleId, level) {
+      const lvl = Math.round(level);
+      const schema = `Return ONLY valid minified JSON — no markdown fences, no extra text before or after.
+CRITICAL JSON ESCAPING RULES:
+1. You MUST escape all newlines inside string values using "\\n". No raw line breaks.
+2. You MUST properly escape all double quotes (\\") inside your text.
+3. For Math/Science equations, you MUST double-escape backslashes (e.g., \\\\Delta, \\\\frac) or use plain text.
+4. BE CONCISE. Keep explanations under 150 words to prevent output cutoff.
+Schema:
+{"topic":"specific topic name","problem":"complete self-contained problem","hint":"helpful nudge","answer":"complete correct answer","explanation":"step-by-step walkthrough"}
+Difficulty: ${lvl}/10.`;
+
+      const P = [
+        // 0 Exercise & Mental
+        `You generate practical daily Exercise & Mental challenges at difficulty ${lvl}/10. Randomly pick ONE type:
+(a) Physical workout: 3-5 specific named exercises with exact sets/reps/duration scaled to the level.
+(b) Chess puzzle: describe a board position (e.g. "White: Kg1 Qe2 Re1 Bb2 | Black: Kg8 Rd8 pf7 pg7") and ask for the best move/tactic with the engine line.
+(c) Brain riddle: a lateral thinking or logic riddle with a clever definitive answer.
+Make it engaging and actionable. ${schema}`,
+
+        // 1 SQL
+        `You generate SQL practice problems at difficulty ${lvl}/10 for competitive exam and interview prep.
+ALWAYS include realistic CREATE TABLE + INSERT statements (4-6 rows of sample data shown clearly as SQL), then ask a specific business question. The answer must be a complete working SQL query.
+Scale: basic SELECT/WHERE → JOINs → GROUP BY/HAVING → subqueries → window functions/CTEs.
+${schema}`,
+
+        // 2 Excel
+        `You generate Excel formula and function problems at difficulty ${lvl}/10.
+ALWAYS include a small realistic data table (4-6 rows shown as plain text with | separators), then either ask what formula to write OR what a given formula evaluates to. Include the concrete numerical or text answer.
+Scale: SUM/AVERAGE/COUNT → VLOOKUP/IF → INDEX-MATCH/SUMIF/COUNTIF → array formulas/XLOOKUP/dynamic arrays.
+${schema}`,
+
+        // 3 Power BI / Tableau
+        `You generate Power BI or Tableau problems at difficulty ${lvl}/10.
+Provide a business scenario with sample data context (describe table structure and a few key values), then ask to write a specific DAX measure (Power BI) OR a Tableau calculated field / LOD expression. The answer must be the complete formula.
+Scale: basic SUM/AVERAGE measures → CALCULATE/FILTER → time intelligence (DATEADD/SAMEPERIODLASTYEAR) → complex LODs/FIXED/INCLUDE. Alternate between BI tools each time.
+${schema}`,
+
+        // 4 Python
+        `You generate Python coding problems at difficulty ${lvl}/10 for competitive programming and data skills.
+Include a clear problem statement and 2-3 concrete input → expected output examples. Answer must be complete working Python 3 code.
+Scale: basic I/O/loops/strings → lists/dicts/sets → algorithms (sorting, searching, recursion) → data structures/OOP/file handling.
+${schema}`,
+
+        // 5 Quant Aptitude
+        `You generate Quantitative Aptitude MCQ word problems at difficulty ${lvl}/10, Indian competitive exam style (CAT/SSC CGL/UPSC/IBPS Banking).
+Must be a word problem with specific numbers. Topics: profit & loss, percentage, ratio & proportion, time-speed-distance, time & work, SI/CI, averages, mixtures, P&C, probability, number theory, HCF/LCM.
+Provide 4 options labelled A) B) C) D). The answer must include the correct letter and the numeric value.
+${schema}`,
+
+        // 6 LR & DI
+        `You generate Logical Reasoning OR Data Interpretation MCQ problems at difficulty ${lvl}/10, Indian competitive exam style.
+For LR choose from: syllogisms, blood relations, seating arrangement (linear/circular), coding-decoding, number/letter series, analogies, direction sense, clocks, calendars, rankings.
+For DI: provide a small data table or bar/pie chart (described as text with 5-7 data points), then ask exactly 2 questions.
+Include 4 options A) B) C) D). Alternate between LR and DI each time.
+${schema}`,
+
+        // 7 General Science
+        `You generate General Science applied/numerical problems at difficulty ${lvl}/10 (10th standard to JEE/NEET level).
+Choose one of: Physics (mechanics, electricity, optics, thermodynamics, modern physics), Chemistry (mole concept, stoichiometry, redox, electrochemistry, organic reaction), Biology (Mendelian genetics calculation, physiology numbers, ecology).
+MUST be computational or application-based — not a pure definition. Include 4 options A) B) C) D) with the answer clearly labelled. Rotate subject each time.
+${schema}`,
+
+        // 8 Current Affairs & GK
+        `You generate Current Affairs and General Knowledge MCQ questions at difficulty ${lvl}/10, UPSC/GPSC/RPSC level.
+Topics: events from Past 1.5 year (from present date), Indian polity (Constitution/Parliament/Judiciary), latest economy(budget, niti ayog, revolutions) & government schemes, appointments and heads, geography & history of either India (Ancient-IVC, mauryan, gupta, medivial - mughal,Modern 1857-1947 & post-indepdence & for geography - national parks, rivers, mountains, climate & pollution international aggrements, desert, coastline) or Gujarat/Rajasthan(Ancient/Medivial/Modern) Only, science & technology(General Science - Physics, Chemistry, Biology), India specific current affairs (from last 8-10 months from present date) like international relations, important awards, sports, major summits, famous personalities, Art & Culture of either india or Gujarat/Rajasthan (Dance, festival,heritage, books & authors literature-Classical & Modern), Defense (Military exercise,nuclear program, ISRO, DRDO) etc.
+Include 4 options A) B) C) D). The explanation must also clarify why each wrong option is incorrect.
+${schema}`,
+
+        // 9 GATE CS
+        `You generate GATE Computer Science MCQ problems at difficulty ${lvl}/10.
+Choose one topic each time: COA (cache/pipeline analysis, addressing modes, instruction cycles), OS (CPU scheduling calculations, page replacement algorithms, deadlock detection), CN (subnetting/VLSM, TCP/IP, routing — Dijkstra/Bellman-Ford), DSA (time/space complexity, tree/graph traversal trace, sorting algorithm step-by-step).
+MUST involve actual computation, numerical trace, or algorithm analysis — not a pure definition. Include 4 options A) B) C) D). Rotate topic each time.
+${schema}`,
+      ];
+      return P[moduleId];
+    }
+
+    function getEvalPrompt() {
+      return `You evaluate student answers for competitive exam and data skill practice. Be encouraging, precise, and fair. Give partial credit for partial understanding.
+Return ONLY valid JSON (no markdown fences, no extra text):
+{"correct":true_or_false,"score":0_to_100,"verdict":"Correct! / Partially Correct / Incorrect","feedback":"2-3 sentences addressing specifically what they got right or wrong","tip":"one key learning point or improvement suggestion"}`;
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  SCREEN MANAGEMENT
+    // ═══════════════════════════════════════════════════
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  SETTINGS
+    // ═══════════════════════════════════════════════════
+    const PROVIDER_INFO = {
+      gemini: `<b>Google Gemini</b> — Free tier: 15 req/min, 1,500 req/day. Default model: <code>gemini-2.0-flash-lite</code> (free & fast).<br>
+Other free models you can type in: <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash-001</code>.<br>
+Get your free key → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>`,
+      groq: `<b>Groq</b> — Very fast, generous free tier. Default model: <code>llama-3.3-70b-versatile</code>.<br>
+Get your free key → <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>`,
+      openrouter: `<b>OpenRouter</b> — Aggregates many models, several free ones. Default: <code>meta-llama/llama-3.1-8b-instruct:free</code>.<br>
+Get your free key → <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a><br>
+Other good free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mistralai/mistral-7b-instruct:free</code>`,
+    };
+
+    let selectedProvider = localStorage.getItem('dph_provider') || 'gemini';
+
+    function selectProvider(p, el) {
+      selectedProvider = p;
+      document.querySelectorAll('.provider-opt').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('provider-info').innerHTML = PROVIDER_INFO[p];
+      const defaults = { gemini: 'gemini-2.0-flash-lite', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.1-8b-instruct:free' };
+      const mi = document.getElementById('model-input');
+      if (!mi.value || Object.values(defaults).includes(mi.value)) mi.placeholder = defaults[p];
+    }
+
+    function saveSettings() {
+      const key = document.getElementById('api-key-input').value.trim();
+      const model = document.getElementById('model-input').value.trim();
+      const errEl = document.getElementById('settings-error');
+      if (!key) { errEl.style.display = 'block'; errEl.textContent = 'Please enter your API key.'; return; }
+      errEl.style.display = 'none';
+      localStorage.setItem('dph_apiKey', key);
+      localStorage.setItem('dph_provider', selectedProvider);
+      localStorage.setItem('dph_model', model);
+      showScreen('home');
+      renderHome();
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  HOME
+    // ═══════════════════════════════════════════════════
+    function renderHome() {
+      S = loadState();
+      document.getElementById('home-date').textContent =
+        new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      document.getElementById('stat-streak').textContent = S.streak;
+      document.getElementById('stat-solved').textContent = S.attempts.reduce((a, b) => a + b, 0);
+      document.getElementById('stat-mods').textContent = S.attempts.filter(a => a > 0).length + '/10';
+
+      const grid = document.getElementById('module-grid');
+      grid.innerHTML = '';
+      MODULES.forEach(m => {
+        const lvl = Math.round(S.levels[m.id]);
+        const att = S.attempts[m.id];
+        const avg = att ? Math.round(S.scores[m.id] / att) : null;
+        const div = document.createElement('div');
+        div.className = 'mod-card';
+        div.style.setProperty('--mod-accent', m.accent);
+        div.style.setProperty('--mod-accent-light', m.accent + '18');
+        div.innerHTML = `
+      <div class="emoji">${m.emoji}</div>
+      <div class="mod-name">${m.name}</div>
+      <div class="mod-sub">${m.sub}</div>
+      <span class="mod-badge">Lvl ${lvl} · ${getLevelLabel(lvl)}</span>
+      <div class="mod-stats">${att > 0 ? att + ' solved · ' + avg + '% avg' : 'Not started yet'}</div>`;
+        div.onclick = () => startModule(m);
+        grid.appendChild(div);
+      });
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  PROBLEM GENERATION
+    // ═══════════════════════════════════════════════════
+    function startModule(m) {
+      currentMod = m;
+      document.getElementById('prob-emoji').textContent = m.emoji;
+      document.getElementById('prob-modname').textContent = m.name;
+      document.getElementById('fb-emoji').textContent = m.emoji;
+      document.getElementById('fb-modname').textContent = m.name;
+      document.getElementById('prob-card').style.setProperty('--accent', m.accent);
+      document.getElementById('fb-next-btn').style.setProperty('--accent', m.accent);
+      document.getElementById('fb-next-btn').onclick = () => newProblem();
+      showScreen('problem');
+      generateProblem();
+    }
+
+    async function generateProblem() {
+      document.getElementById('prob-loading').style.display = 'block';
+      document.getElementById('prob-content').style.display = 'none';
+      document.getElementById('prob-error').style.display = 'none';
+      document.getElementById('prob-error').textContent = '';
+
+      const lvl = S.levels[currentMod.id];
+      const badge = `Lvl ${Math.round(lvl)} · ${getLevelLabel(lvl)}`;
+      document.getElementById('prob-levelbadge').textContent = badge;
+
+      try {
+        const raw = await callAI(
+          getSysPrompt(currentMod.id, lvl),
+          `Generate a fresh, creative, varied problem. Seed: ${Date.now()}-${Math.random().toFixed(9)}`
+        );
+        currentProblem = JSON.parse(raw);
+
+        // populate
+        const isCode = CODE_MODULES.has(currentMod.id);
+        document.getElementById('prob-topic').textContent = currentProblem.topic;
+        const stmt = document.getElementById('prob-statement');
+        stmt.textContent = currentProblem.problem;
+        stmt.className = isCode ? 'code-text' : 'problem-text';
+
+        // reset UI
+        document.getElementById('hint-box').style.display = 'none';
+        document.getElementById('hint-box').textContent = currentProblem.hint;
+        document.getElementById('answer-input').value = '';
+        document.getElementById('answer-input').style.fontFamily = isCode ? 'var(--mono)' : 'var(--font)';
+        document.getElementById('answer-error').style.display = 'none';
+        document.getElementById('answer-section').style.display = 'block';
+        document.getElementById('answer-reveal').classList.remove('visible');
+        document.getElementById('submit-btn').disabled = false;
+        document.getElementById('submit-btn').textContent = 'Submit answer';
+        document.getElementById('submit-btn').style.setProperty('--accent', currentMod.accent);
+
+        document.getElementById('prob-loading').style.display = 'none';
+        document.getElementById('prob-content').style.display = 'block';
+      } catch (e) {
+        document.getElementById('prob-loading').style.display = 'none';
+        const el = document.getElementById('prob-error');
+        el.style.display = 'block';
+        el.innerHTML = `<b>Error generating problem:</b> ${e.message}<br><br>
+      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="generateProblem()">Try again</button>`;
+      }
+    }
+
+    function newProblem() { generateProblem(); }
+
+    function goHome() {
+      showScreen('home');
+      renderHome();
+    }
+
+    function toggleHint() {
+      const h = document.getElementById('hint-box');
+      const btn = h.previousElementSibling;
+      if (h.style.display === 'none') { h.style.display = 'block'; btn.textContent = 'Hide hint 💡'; }
+      else { h.style.display = 'none'; btn.textContent = 'Show hint 💡'; }
+    }
+
+    function skipProblem() {
+      if (!currentProblem) return;
+      S.streak = 0;
+      saveState(S);
+      const isCode = CODE_MODULES.has(currentMod.id);
+      const ra = document.getElementById('reveal-answer');
+      ra.textContent = currentProblem.answer;
+      ra.className = isCode ? 'code-text' : 'problem-text';
+      document.getElementById('reveal-explanation').textContent = currentProblem.explanation;
+      document.getElementById('answer-section').style.display = 'none';
+      document.getElementById('answer-reveal').classList.add('visible');
+    }
+
+    function handleKey(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { submitAnswer(); }
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  SUBMISSION & EVALUATION
+    // ═══════════════════════════════════════════════════
+    async function submitAnswer() {
+      const ans = document.getElementById('answer-input').value.trim();
+      if (!ans) return;
+      lastAnswer = ans;
+
+      document.getElementById('submit-btn').disabled = true;
+      document.getElementById('submit-btn').textContent = 'Evaluating…';
+      document.getElementById('answer-error').style.display = 'none';
+
+      showScreen('feedback');
+      document.getElementById('fb-loading').style.display = 'block';
+      document.getElementById('fb-content').style.display = 'none';
+      document.getElementById('fb-error').style.display = 'none';
+
+      try {
+        const raw = await callAI(
+          getEvalPrompt(),
+          `Module: ${currentMod.name}
+Problem: ${currentProblem.problem}
+Correct Answer: ${currentProblem.answer}
+Student Answer: ${ans}`,
+          700
+        );
+        const result = JSON.parse(raw);
+
+        // update state
+        S.attempts[currentMod.id]++;
+        S.scores[currentMod.id] += result.score;
+        if (result.score >= 70) {
+          S.streak++;
+          if (result.score >= 80)
+            S.levels[currentMod.id] = Math.min(10, +(S.levels[currentMod.id] + 0.3).toFixed(1));
+        } else {
+          S.streak = 0;
+        }
+        saveState(S);
+
+        // render feedback
+        const scoreColor = result.score >= 80 ? '#639922' : result.score >= 55 ? '#BA7517' : '#E24B4A';
+        document.getElementById('fb-score-num').textContent = result.score + '%';
+        document.getElementById('fb-score-num').style.color = scoreColor;
+        document.getElementById('fb-verdict').textContent = result.verdict;
+        document.getElementById('fb-feedback-text').textContent = result.feedback;
+        const tipEl = document.getElementById('fb-tip');
+        if (result.tip) { tipEl.textContent = 'Tip: ' + result.tip; tipEl.style.display = 'inline-block'; }
+        else { tipEl.style.display = 'none'; }
+        document.getElementById('fb-progress-bar').style.width = result.score + '%';
+        document.getElementById('fb-progress-bar').style.background = scoreColor;
+        document.getElementById('fb-score-card').style.borderTop = `2px solid ${scoreColor}`;
+
+        const isCode = CODE_MODULES.has(currentMod.id);
+        const ya = document.getElementById('fb-your-answer');
+        ya.textContent = lastAnswer;
+        ya.className = isCode ? 'code-text' : 'problem-text';
+        const ca = document.getElementById('fb-correct-answer');
+        ca.textContent = currentProblem.answer;
+        ca.className = isCode ? 'code-text' : 'problem-text';
+        const ex = document.getElementById('fb-explanation');
+        ex.textContent = currentProblem.explanation;
+        ex.className = 'problem-text';
+        document.getElementById('fb-answer-card').style.setProperty('--accent', scoreColor);
+        document.getElementById('fb-next-btn').style.setProperty('--accent', currentMod.accent);
+
+        document.getElementById('fb-loading').style.display = 'none';
+        document.getElementById('fb-content').style.display = 'block';
+      } catch (e) {
+        document.getElementById('fb-loading').style.display = 'none';
+        const el = document.getElementById('fb-error');
+        el.style.display = 'block';
+        el.innerHTML = `<b>Evaluation failed:</b> ${e.message}<br><br>
+      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="showScreen('problem')">← Back to problem</button>`;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  PROVIDER INFO INIT
+    // ═══════════════════════════════════════════════════
+    function initSettings() {
+      const savedProvider = localStorage.getItem('dph_provider') || 'gemini';
+      selectedProvider = savedProvider;
+      document.querySelectorAll('.provider-opt').forEach(el => {
+        if (el.dataset.provider === savedProvider) el.classList.add('selected');
+        else el.classList.remove('selected');
+      });
+      document.getElementById('provider-info').innerHTML = PROVIDER_INFO[savedProvider];
+      const savedKey = localStorage.getItem('dph_apiKey') || '';
+      const savedModel = localStorage.getItem('dph_model') || '';
+      document.getElementById('api-key-input').value = savedKey;
+      document.getElementById('model-input').value = savedModel;
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  BOOT
+    // ═══════════════════════════════════════════════════
+    (function boot() {
+      initSettings();
+      const hasKey = !!localStorage.getItem('dph_apiKey');
+      if (hasKey) { showScreen('home'); renderHome(); }
+      else { showScreen('settings'); }
+    })();
+  </script>
+</body>
+
+</html>
