@@ -720,9 +720,17 @@
 
         <!-- Hint -->
         <div style="margin-bottom:14px">
-          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="toggleHint()">Show hint
+          <button id="hint-toggle-btn" class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="toggleHint()">Show hint
             💡</button>
           <div id="hint-box" class="hint-box" style="display:none;margin-top:8px"></div>
+        </div>
+
+        <div id="mcq-box" class="card" style="display:none">
+          <div class="label">Choose Option</div>
+          <div id="mcq-options" style="display:grid;gap:8px"></div>
+          <div style="margin-top:10px">
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="useSelectedOption()">Use selected option in answer</button>
+          </div>
         </div>
 
         <!-- Answer shown after skip -->
@@ -873,7 +881,7 @@
       openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.1-8b-instruct:free' },
     };
 
-    async function callAI(systemPrompt, userMsg, maxTokens = 1800) {
+    async function callAI(systemPrompt, userMsg, maxTokens = 2200) {
       const provider = localStorage.getItem('dph_provider') || 'gemini';
       const key = localStorage.getItem('dph_apiKey') || '';
       const def = PROVIDER_DEFAULTS[provider];
@@ -891,6 +899,7 @@
           }
         };
         const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (res.status === 429) throw new Error('RATE_LIMIT: Gemini rate limit reached. Please retry in a few seconds.');
         const data = await res.json();
         if (data.error) {
           const code = data.error.code ? ` [${data.error.code}]` : '';
@@ -914,6 +923,7 @@
         };
         body.response_format = { type: 'json_object' };
         const res = await fetch(def.url, { method: 'POST', headers, body: JSON.stringify(body) });
+        if (res.status === 429) throw new Error('RATE_LIMIT: API rate limit reached. Please retry in a few seconds.');
         const data = await res.json();
         if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)));
         raw = data.choices[0].message.content;
@@ -933,6 +943,7 @@
         if (start !== -1 && end !== -1 && end > start) {
           const candidate = raw.slice(start, end + 1)
             .replace(/,\s*([}\]])/g, '$1')
+            .replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
             .replace(/\u0000/g, '');
           try { return JSON.parse(candidate); } catch (_) { }
         }
@@ -1062,12 +1073,75 @@ Variety rules:
 - Produce a ${style} question.
 - Avoid repeating recent topics: ${recentTopics}
 - Avoid repeating recent templates/signatures: ${recentSigs}
-- Change nouns, setting, numeric values, and framing from prior questions.`;
+- Change nouns, setting, numeric values, and framing from prior questions.
+- If MCQ is expected for this module, ALWAYS include four options as separate lines: A) ... B) ... C) ... D) ...`;
+    }
+
+    function getQuantTopicInstruction() {
+      const quantTopics = [
+        'profit and loss',
+        'simple and compound interest',
+        'time-speed-distance including trains and boats',
+        'time and work including pipes & cisterns',
+        'mixture and alligation',
+        'number systems with HCF/LCM',
+        'averages',
+        'ratio and proportion',
+        'percentages',
+        'mensuration / geometry / trigonometry',
+        'calculus (basic derivative/integral application)',
+        'statistics and probability',
+        'permutation and combination'
+      ];
+      const h = getModuleHistory(5);
+      if (!h.quantCursor) h.quantCursor = 0;
+      const topic = quantTopics[h.quantCursor % quantTopics.length];
+      h.quantCursor++;
+      return `Mandatory quant topic for THIS question: ${topic}. Do not use profit/loss unless it is the selected topic.`;
     }
 
     function isCompleteProblem(obj) {
       return obj && typeof obj.topic === 'string' && typeof obj.problem === 'string' &&
         typeof obj.hint === 'string' && typeof obj.answer === 'string' && typeof obj.explanation === 'string';
+    }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function extractMcqOptions(problemText) {
+      const text = problemText || '';
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const options = [];
+      for (const line of lines) {
+        const m = line.match(/^([A-D])[\)\.\:-]\s*(.+)$/i);
+        if (m) options.push({ label: m[1].toUpperCase(), text: m[2] });
+      }
+      return options.length >= 4 ? options.slice(0, 4) : [];
+    }
+
+    function renderMcqOptions(problemText) {
+      const opts = extractMcqOptions(problemText);
+      const box = document.getElementById('mcq-box');
+      const wrap = document.getElementById('mcq-options');
+      wrap.innerHTML = '';
+      if (!opts.length) {
+        box.style.display = 'none';
+        return;
+      }
+      opts.forEach((opt, i) => {
+        const id = `mcq-opt-${i}`;
+        const row = document.createElement('label');
+        row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg2)';
+        row.innerHTML = `<input type="radio" name="mcq-choice" value="${opt.label}" id="${id}" style="width:auto;margin-top:2px"><span><b>${opt.label})</b> ${opt.text}</span>`;
+        wrap.appendChild(row);
+      });
+      box.style.display = 'block';
+    }
+
+    function useSelectedOption() {
+      const picked = document.querySelector('input[name="mcq-choice"]:checked');
+      if (!picked) return;
+      const area = document.getElementById('answer-input');
+      area.value = picked.value;
+      area.focus();
     }
 
     function getEvalPrompt() {
@@ -1187,17 +1261,21 @@ Other good free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mis
         let lastErr = null;
         for (let attempt = 1; attempt <= 2; attempt++) {
           try {
+            const extra = currentMod.id === 5 ? `\n${getQuantTopicInstruction()}` : '';
             const raw = await callAI(
               getSysPrompt(currentMod.id, effectiveDifficulty),
               `${buildVarietyInstruction(currentMod.id, effectiveDifficulty)}
 Generate one fresh, creative, varied problem.
-Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}`
+Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}${extra}`
             );
             parsed = safeParseJSON(raw);
             if (!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema.');
             break;
           } catch (err) {
             lastErr = err;
+            if (String(err.message || '').includes('RATE_LIMIT') && attempt < 2) {
+              await sleep(1200);
+            }
           }
         }
         if (!parsed) throw lastErr || new Error('Problem generation failed.');
@@ -1218,7 +1296,9 @@ Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}`
 
         // reset UI
         document.getElementById('hint-box').style.display = 'none';
+        document.getElementById('hint-toggle-btn').textContent = 'Show hint 💡';
         document.getElementById('hint-box').textContent = currentProblem.hint;
+        renderMcqOptions(currentProblem.problem);
         document.getElementById('answer-input').value = '';
         document.getElementById('answer-input').style.fontFamily = isCode ? 'var(--mono)' : 'var(--font)';
         document.getElementById('answer-error').style.display = 'none';
@@ -1248,7 +1328,7 @@ Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}`
 
     function toggleHint() {
       const h = document.getElementById('hint-box');
-      const btn = h.previousElementSibling;
+      const btn = document.getElementById('hint-toggle-btn');
       if (h.style.display === 'none') { h.style.display = 'block'; btn.textContent = 'Hide hint 💡'; }
       else { h.style.display = 'none'; btn.textContent = 'Show hint 💡'; }
     }
