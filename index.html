@@ -862,6 +862,7 @@
     let currentMod = null;
     let currentProblem = null;
     let lastAnswer = '';
+    const sessionHistory = {};
 
     // ═══════════════════════════════════════════════════
     //  API
@@ -872,7 +873,7 @@
       openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.1-8b-instruct:free' },
     };
 
-    async function callAI(systemPrompt, userMsg, maxTokens = 3000) {
+    async function callAI(systemPrompt, userMsg, maxTokens = 1800) {
       const provider = localStorage.getItem('dph_provider') || 'gemini';
       const key = localStorage.getItem('dph_apiKey') || '';
       const def = PROVIDER_DEFAULTS[provider];
@@ -908,9 +909,10 @@
           headers['X-Title'] = 'Daily Practice Hub';
         }
         const body = {
-          model, max_tokens: maxTokens, temperature: 0.9,
+          model, max_tokens: maxTokens, temperature: 1.05,
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }]
         };
+        body.response_format = { type: 'json_object' };
         const res = await fetch(def.url, { method: 'POST', headers, body: JSON.stringify(body) });
         const data = await res.json();
         if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)));
@@ -919,6 +921,23 @@
 
       // Strip markdown fences if present
       return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    }
+
+    function safeParseJSON(raw) {
+      if (!raw || typeof raw !== 'string') throw new Error('Empty response from model.');
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        const start = raw.indexOf('{');
+        const end = raw.lastIndexOf('}');
+        if (start !== -1 && end !== -1 && end > start) {
+          const candidate = raw.slice(start, end + 1)
+            .replace(/,\s*([}\]])/g, '$1')
+            .replace(/\u0000/g, '');
+          try { return JSON.parse(candidate); } catch (_) { }
+        }
+      }
+      throw new Error('Model returned malformed JSON. Please retry.');
     }
 
     // ═══════════════════════════════════════════════════
@@ -1000,6 +1019,55 @@ MUST involve actual computation, numerical trace, or algorithm analysis — not 
 ${schema}`,
       ];
       return P[moduleId];
+    }
+
+    function getModuleHistory(modId) {
+      if (!sessionHistory[modId]) {
+        sessionHistory[modId] = { topicHistory: [], signatureHistory: [], styleCursor: 0 };
+      }
+      return sessionHistory[modId];
+    }
+
+    function normalizeSignature(text) {
+      return (text || '').toLowerCase()
+        .replace(/\d+/g, '#')
+        .replace(/\s+/g, ' ')
+        .replace(/[^\w\s|]/g, '')
+        .trim()
+        .slice(0, 120);
+    }
+
+    function pickDifficulty(levelBase) {
+      const base = Math.round(levelBase);
+      const delta = [-1, 0, 0, 1][Math.floor(Math.random() * 4)];
+      return Math.min(10, Math.max(1, base + delta));
+    }
+
+    function buildVarietyInstruction(modId, difficulty) {
+      const h = getModuleHistory(modId);
+      const styles = [
+        'scenario-based',
+        'calculation-heavy',
+        'debug/fix-the-mistake',
+        'real-world business case',
+        'exam-style MCQ with twist',
+        'short but tricky'
+      ];
+      const style = styles[h.styleCursor % styles.length];
+      h.styleCursor++;
+      const recentTopics = h.topicHistory.slice(-4).join(' | ') || 'none';
+      const recentSigs = h.signatureHistory.slice(-4).join(' | ') || 'none';
+      return `Use effective difficulty ${difficulty}/10 (user level anchor is ${Math.round(S.levels[modId])}/10).
+Variety rules:
+- Produce a ${style} question.
+- Avoid repeating recent topics: ${recentTopics}
+- Avoid repeating recent templates/signatures: ${recentSigs}
+- Change nouns, setting, numeric values, and framing from prior questions.`;
+    }
+
+    function isCompleteProblem(obj) {
+      return obj && typeof obj.topic === 'string' && typeof obj.problem === 'string' &&
+        typeof obj.hint === 'string' && typeof obj.answer === 'string' && typeof obj.explanation === 'string';
     }
 
     function getEvalPrompt() {
@@ -1110,15 +1178,36 @@ Other good free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mis
       document.getElementById('prob-error').textContent = '';
 
       const lvl = S.levels[currentMod.id];
-      const badge = `Lvl ${Math.round(lvl)} · ${getLevelLabel(lvl)}`;
+      const effectiveDifficulty = pickDifficulty(lvl);
+      const badge = `Lvl ${Math.round(lvl)} · ${getLevelLabel(lvl)} (Q ${effectiveDifficulty}/10)`;
       document.getElementById('prob-levelbadge').textContent = badge;
 
       try {
-        const raw = await callAI(
-          getSysPrompt(currentMod.id, lvl),
-          `Generate a fresh, creative, varied problem. Seed: ${Date.now()}-${Math.random().toFixed(9)}`
-        );
-        currentProblem = JSON.parse(raw);
+        let parsed = null;
+        let lastErr = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const raw = await callAI(
+              getSysPrompt(currentMod.id, effectiveDifficulty),
+              `${buildVarietyInstruction(currentMod.id, effectiveDifficulty)}
+Generate one fresh, creative, varied problem.
+Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}`
+            );
+            parsed = safeParseJSON(raw);
+            if (!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema.');
+            break;
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+        if (!parsed) throw lastErr || new Error('Problem generation failed.');
+        currentProblem = parsed;
+
+        const h = getModuleHistory(currentMod.id);
+        h.topicHistory.push((currentProblem.topic || '').trim());
+        h.signatureHistory.push(normalizeSignature(currentProblem.problem));
+        h.topicHistory = h.topicHistory.slice(-8);
+        h.signatureHistory = h.signatureHistory.slice(-8);
 
         // populate
         const isCode = CODE_MODULES.has(currentMod.id);
@@ -1207,7 +1296,7 @@ Correct Answer: ${currentProblem.answer}
 Student Answer: ${ans}`,
           700
         );
-        const result = JSON.parse(raw);
+        const result = safeParseJSON(raw);
 
         // update state
         S.attempts[currentMod.id]++;
