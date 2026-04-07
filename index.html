@@ -345,6 +345,41 @@
       border-left: 2px solid var(--border2)
     }
 
+    /* MCQ OPTIONS */
+    .mcq-option-label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 14px;
+      border: 0.5px solid var(--border2);
+      border-radius: 9px;
+      cursor: pointer;
+      background: var(--bg2);
+      transition: background .12s, border-color .12s;
+      line-height: 1.6;
+      font-size: 13px;
+      color: var(--text)
+    }
+
+    .mcq-option-label:hover {
+      background: var(--bg3);
+      border-color: var(--accent, #378ADD)
+    }
+
+    .mcq-option-label input[type="radio"] {
+      width: auto;
+      margin-top: 3px;
+      flex-shrink: 0;
+      accent-color: var(--accent, #378ADD)
+    }
+
+    .mcq-option-label .opt-letter {
+      font-weight: 600;
+      color: var(--accent, #378ADD);
+      flex-shrink: 0;
+      min-width: 18px
+    }
+
     /* FEEDBACK SCORE */
     .score-big {
       text-align: center;
@@ -725,11 +760,12 @@
           <div id="hint-box" class="hint-box" style="display:none;margin-top:8px"></div>
         </div>
 
+        <!-- FIX #3: Improved MCQ box with better styled options -->
         <div id="mcq-box" class="card" style="display:none">
           <div class="label">Choose Option</div>
           <div id="mcq-options" style="display:grid;gap:8px"></div>
-          <div style="margin-top:10px">
-            <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="useSelectedOption()">Use selected option in answer</button>
+          <div style="margin-top:12px">
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="useSelectedOption()">✓ Use selected option in answer box</button>
           </div>
         </div>
 
@@ -845,6 +881,8 @@
 
     const LEVEL_LABELS = ["", "Beginner", "Beginner+", "Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert", "Master"];
     const CODE_MODULES = new Set([1, 2, 3, 4, 9]);
+    // Modules that always show MCQ options box
+    const MCQ_MODULES = new Set([5, 6, 7, 8, 9]);
 
     function getLevelLabel(l) { return LEVEL_LABELS[Math.min(10, Math.round(l))]; }
 
@@ -873,6 +911,248 @@
     const sessionHistory = {};
 
     // ═══════════════════════════════════════════════════
+    //  FIX #1: Stronger randomization helpers
+    // ═══════════════════════════════════════════════════
+
+    // Entropy pool: high-precision timestamp + crypto random
+    function strongSeed() {
+      const t = performance.now().toFixed(6);
+      const r = crypto.getRandomValues(new Uint32Array(2));
+      return `${Date.now()}-${t}-${r[0].toString(36)}-${r[1].toString(36)}`;
+    }
+
+    // Per-module counters stored in sessionHistory, NOT reset between problems of same module
+    function getModuleHistory(modId) {
+      if (!sessionHistory[modId]) {
+        sessionHistory[modId] = {
+          topicHistory: [],
+          signatureHistory: [],
+          styleCursor: Math.floor(Math.random() * 6), // start at random style
+          quantCursor: Math.floor(Math.random() * 13),
+          gateTopicCursor: Math.floor(Math.random() * 4),
+          lrdiCursor: Math.floor(Math.random() * 2),
+          scienceCursor: Math.floor(Math.random() * 3),
+          gkCursor: Math.floor(Math.random() * 8),
+        };
+      }
+      return sessionHistory[modId];
+    }
+
+    function normalizeSignature(text) {
+      return (text || '').toLowerCase()
+        .replace(/\d+/g, '#')
+        .replace(/\s+/g, ' ')
+        .replace(/[^\w\s|]/g, '')
+        .trim()
+        .slice(0, 120);
+    }
+
+    function pickDifficulty(levelBase) {
+      const base = Math.round(levelBase);
+      const delta = [-1, 0, 0, 1][Math.floor(Math.random() * 4)];
+      return Math.min(10, Math.max(1, base + delta));
+    }
+
+    // Shuffle an array (Fisher-Yates) — used to pick random framing words each call
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    const STYLE_POOL = [
+      'scenario-based with a real-world business context',
+      'calculation-heavy with multi-step working',
+      'debug-the-mistake: show wrong working, ask student to identify & fix the error',
+      'real-world Indian industry or government data case',
+      'exam-style with a deliberate twist or trap option',
+      'short and deceptively tricky',
+      'story-problem with a named character',
+      'comparison or "which is better" analysis',
+    ];
+
+    const SETTING_WORDS = shuffle([
+      'agriculture', 'e-commerce', 'fintech startup', 'railway network', 'hospital management',
+      'school results', 'cricket tournament', 'ISRO mission', 'stock brokerage', 'food delivery app',
+      'textile factory in Surat', 'sugar cooperative in Maharashtra', 'real estate in Ahmedabad',
+      'pharmaceutical company', 'solar energy plant', 'microfinance institution', 'logistics warehouse',
+    ]);
+    let settingCursor = 0;
+
+    function nextSetting() {
+      const s = SETTING_WORDS[settingCursor % SETTING_WORDS.length];
+      settingCursor++;
+      return s;
+    }
+
+    function buildVarietyInstruction(modId, difficulty) {
+      const h = getModuleHistory(modId);
+      const style = STYLE_POOL[h.styleCursor % STYLE_POOL.length];
+      h.styleCursor++;
+      const recentTopics = h.topicHistory.slice(-5).join(' | ') || 'none';
+      const recentSigs = h.signatureHistory.slice(-5).join(' | ') || 'none';
+      const setting = nextSetting();
+      // Pick 3 random number seeds to force numeric variation
+      const nums = [
+        Math.floor(Math.random() * 900 + 100),
+        Math.floor(Math.random() * 9000 + 1000),
+        (Math.random() * 40 + 5).toFixed(1)
+      ].join(', ');
+
+      return `Effective difficulty: ${difficulty}/10.
+VARIETY MANDATE (follow strictly):
+- Style: ${style}
+- Setting/domain: ${setting}
+- Seed numbers (use at least one of these values in the problem): ${nums}
+- BANNED recent topics (do NOT repeat): ${recentTopics}
+- BANNED recent patterns (do NOT repeat): ${recentSigs}
+- Change ALL of: character names, numeric values, units, industry context, and question framing vs. prior problems.
+- If MCQ: four options on SEPARATE lines prefixed exactly A) B) C) D) — make all distractors plausible.`;
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  Topic rotation helpers (deterministic cycling + random offset)
+    // ═══════════════════════════════════════════════════
+    const QUANT_TOPICS = [
+      'profit and loss', 'simple and compound interest', 'time-speed-distance including trains and boats',
+      'time and work including pipes & cisterns', 'mixture and alligation', 'number systems with HCF/LCM',
+      'averages', 'ratio and proportion', 'percentages', 'mensuration / geometry / trigonometry',
+      'basic derivative or integral application', 'statistics and probability', 'permutation and combination'
+    ];
+    const GATE_TOPICS = [
+      'COA (cache miss/hit analysis, pipeline stages, addressing modes)',
+      'OS (CPU scheduling trace — Gantt chart with waiting time/turnaround, page replacement)',
+      'CN (subnetting/VLSM calculation, Dijkstra shortest path, TCP flow control)',
+      'DSA (Big-O analysis, tree/graph traversal trace, sorting algorithm step-by-step with comparisons)'
+    ];
+    const SCIENCE_TOPICS = [
+      'Physics (kinematics, Newton laws, work-energy, electricity, optics)',
+      'Chemistry (mole concept, stoichiometry, redox/electrochemistry, IUPAC naming)',
+      'Biology (Mendelian genetics Punnett square, physiology values, ecology energy flow)'
+    ];
+    const GK_TOPICS = [
+      'Indian Constitution (articles, schedules, amendments, landmark judgements)',
+      'Indian Economy (Union Budget highlights, NITI Aayog, Five-Year Plans legacy)',
+      'Current Affairs India — international relations, summits, agreements (last 8 months)',
+      'Geography of India (rivers, mountains, national parks, climate, coastline)',
+      'Gujarat/Rajasthan history and culture (Ancient/Medieval/Modern, dance, festival, heritage)',
+      'Science & Technology (ISRO missions, DRDO programs, nuclear milestones)',
+      'Awards, appointments and sports (Bharat Ratna, Olympics, major cups)',
+      'Art & Culture (classical music/dance, books & authors, UNESCO heritage India)'
+    ];
+    const LRDI_TYPES = ['LR', 'DI'];
+
+    function getQuantTopicInstruction() {
+      const h = getModuleHistory(5);
+      const topic = QUANT_TOPICS[h.quantCursor % QUANT_TOPICS.length];
+      h.quantCursor++;
+      return `MANDATORY quant topic for THIS question: "${topic}". Do NOT drift to another topic.`;
+    }
+    function getGateTopicInstruction() {
+      const h = getModuleHistory(9);
+      const topic = GATE_TOPICS[h.gateTopicCursor % GATE_TOPICS.length];
+      h.gateTopicCursor++;
+      return `MANDATORY GATE topic for THIS question: ${topic}.`;
+    }
+    function getScienceTopicInstruction() {
+      const h = getModuleHistory(7);
+      const topic = SCIENCE_TOPICS[h.scienceCursor % SCIENCE_TOPICS.length];
+      h.scienceCursor++;
+      return `MANDATORY science subject for THIS question: ${topic}.`;
+    }
+    function getGKTopicInstruction() {
+      const h = getModuleHistory(8);
+      const topic = GK_TOPICS[h.gkCursor % GK_TOPICS.length];
+      h.gkCursor++;
+      return `MANDATORY GK topic for THIS question: ${topic}.`;
+    }
+    function getLRDITypeInstruction() {
+      const h = getModuleHistory(6);
+      const type = LRDI_TYPES[h.lrdiCursor % 2];
+      h.lrdiCursor++;
+      return type === 'LR'
+        ? 'Generate an LR question. Choose exactly one sub-type: syllogism | blood relations | seating arrangement | coding-decoding | series | direction sense | clock/calendar | ranking.'
+        : 'Generate a DI question. Provide a compact data table (5-7 rows, plain text with | separators), then ask exactly 2 sub-questions.';
+    }
+
+    function isCompleteProblem(obj) {
+      return obj && typeof obj.topic === 'string' && typeof obj.problem === 'string' &&
+        typeof obj.hint === 'string' && typeof obj.answer === 'string' && typeof obj.explanation === 'string';
+    }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ═══════════════════════════════════════════════════
+    //  FIX #2: Robust JSON parser — handles truncation & bad escapes
+    // ═══════════════════════════════════════════════════
+    function repairJSON(raw) {
+      if (!raw || typeof raw !== 'string') throw new Error('Empty response from model.');
+
+      let s = raw.trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim();
+
+      // Attempt 1: straight parse
+      try { return JSON.parse(s); } catch (_) { }
+
+      // Attempt 2: extract outermost { ... }
+      const start = s.indexOf('{');
+      const end = s.lastIndexOf('}');
+      if (start !== -1 && end > start) {
+        let candidate = s.slice(start, end + 1);
+
+        // Fix bad escape sequences (lone backslashes not followed by valid escape chars)
+        candidate = candidate.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+
+        // Fix trailing commas before ] or }
+        candidate = candidate.replace(/,\s*([}\]])/g, '$1');
+
+        // Remove null bytes
+        candidate = candidate.replace(/\u0000/g, '');
+
+        try { return JSON.parse(candidate); } catch (_) { }
+
+        // Attempt 3: the JSON may be truncated mid-string — try to close open strings and braces
+        let fixed = candidate;
+
+        // Count unclosed quotes — if odd number, add a closing quote
+        const quoteCount = (fixed.match(/(?<!\\)"/g) || []).length;
+        if (quoteCount % 2 !== 0) fixed += '"';
+
+        // Close any unclosed braces/brackets
+        const opens = (fixed.match(/\{/g) || []).length;
+        const closes = (fixed.match(/\}/g) || []).length;
+        const brackets = (fixed.match(/\[/g) || []).length;
+        const bracketCloses = (fixed.match(/\]/g) || []).length;
+
+        fixed += ']'.repeat(Math.max(0, brackets - bracketCloses));
+        fixed += '}'.repeat(Math.max(0, opens - closes));
+
+        // Remove trailing comma before added closing
+        fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+
+        try { return JSON.parse(fixed); } catch (_) { }
+      }
+
+      throw new Error('Model returned malformed JSON. The response may have been cut off. Please retry.');
+    }
+
+    function safeParseJSON(raw) {
+      const parsed = repairJSON(raw);
+      // Sanitise field values — ensure no raw newlines break things later
+      for (const key of ['topic', 'problem', 'hint', 'answer', 'explanation']) {
+        if (parsed[key] && typeof parsed[key] === 'string') {
+          // Replace literal \n escape sequences (if model double-escaped them) with real newlines
+          parsed[key] = parsed[key].replace(/\\n/g, '\n');
+        }
+      }
+      return parsed;
+    }
+
+    // ═══════════════════════════════════════════════════
     //  API
     // ═══════════════════════════════════════════════════
     const PROVIDER_DEFAULTS = {
@@ -894,7 +1174,7 @@
           contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userMsg }] }],
           generationConfig: {
             maxOutputTokens: maxTokens,
-            temperature: 0.9,
+            temperature: 1.0,
             responseMimeType: "application/json"
           }
         };
@@ -929,26 +1209,7 @@
         raw = data.choices[0].message.content;
       }
 
-      // Strip markdown fences if present
       return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    }
-
-    function safeParseJSON(raw) {
-      if (!raw || typeof raw !== 'string') throw new Error('Empty response from model.');
-      try {
-        return JSON.parse(raw);
-      } catch (_) {
-        const start = raw.indexOf('{');
-        const end = raw.lastIndexOf('}');
-        if (start !== -1 && end !== -1 && end > start) {
-          const candidate = raw.slice(start, end + 1)
-            .replace(/,\s*([}\]])/g, '$1')
-            .replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
-            .replace(/\u0000/g, '');
-          try { return JSON.parse(candidate); } catch (_) { }
-        }
-      }
-      throw new Error('Model returned malformed JSON. Please retry.');
     }
 
     // ═══════════════════════════════════════════════════
@@ -956,165 +1217,105 @@
     // ═══════════════════════════════════════════════════
     function getSysPrompt(moduleId, level) {
       const lvl = Math.round(level);
+      // FIX #2: Tighter schema with explicit conciseness rules to prevent truncation
       const schema = `Return ONLY valid minified JSON — no markdown fences, no extra text before or after.
-CRITICAL JSON ESCAPING RULES:
-1. You MUST escape all newlines inside string values using "\\n". No raw line breaks.
-2. You MUST properly escape all double quotes (\\") inside your text.
-3. For Math/Science equations, you MUST double-escape backslashes (e.g., \\\\Delta, \\\\frac) or use plain text.
-4. BE CONCISE. Keep explanations under 150 words to prevent output cutoff.
-Schema:
-{"topic":"specific topic name","problem":"complete self-contained problem","hint":"helpful nudge","answer":"complete correct answer","explanation":"step-by-step walkthrough"}
+CRITICAL JSON RULES:
+1. Escape ALL newlines inside string values as \\n (two characters: backslash + n).
+2. Escape ALL double-quotes inside strings as \\".
+3. For math: write equations in plain text (e.g., "Delta = b^2 - 4ac") — NO LaTeX backslashes.
+4. CONCISENESS IS MANDATORY to avoid response cutoff:
+   - problem: max 120 words
+   - explanation: max 100 words
+   - hint: max 30 words
+   - answer: max 60 words
+Schema (output exactly this structure):
+{"topic":"...","problem":"...","hint":"...","answer":"...","explanation":"..."}
 Difficulty: ${lvl}/10.`;
 
       const P = [
         // 0 Exercise & Mental
         `You generate practical daily Exercise & Mental challenges at difficulty ${lvl}/10. Randomly pick ONE type:
-(a) Physical workout: 3-5 specific named exercises with exact sets/reps/duration scaled to the level.
-(b) Chess puzzle: describe a board position (e.g. "White: Kg1 Qe2 Re1 Bb2 | Black: Kg8 Rd8 pf7 pg7") and ask for the best move/tactic with the engine line.
-(c) Brain riddle: a lateral thinking or logic riddle with a clever definitive answer.
+(a) Physical workout: 3-5 named exercises with exact sets/reps/duration scaled to level.
+(b) Chess puzzle: describe board position (e.g., "White: Kg1 Qe2 Re1 | Black: Kg8 Rd8 pf7") and ask for the best move.
+(c) Brain riddle: lateral-thinking or logic riddle with a definitive clever answer.
 Make it engaging and actionable. ${schema}`,
 
         // 1 SQL
-        `You generate SQL practice problems at difficulty ${lvl}/10 for competitive exam and interview prep.
-ALWAYS include realistic CREATE TABLE + INSERT statements (4-6 rows of sample data shown clearly as SQL), then ask a specific business question. The answer must be a complete working SQL query.
-Scale: basic SELECT/WHERE → JOINs → GROUP BY/HAVING → subqueries → window functions/CTEs.
+        `You generate SQL practice problems at difficulty ${lvl}/10 for interview prep.
+ALWAYS include CREATE TABLE + INSERT statements (4-5 rows), then ask a specific business question. Answer must be a complete working SQL query.
+Scale: SELECT/WHERE → JOINs → GROUP BY/HAVING → subqueries → window functions/CTEs.
 ${schema}`,
 
         // 2 Excel
-        `You generate Excel formula and function problems at difficulty ${lvl}/10.
-ALWAYS include a small realistic data table (4-6 rows shown as plain text with | separators), then either ask what formula to write OR what a given formula evaluates to. Include the concrete numerical or text answer.
-Scale: SUM/AVERAGE/COUNT → VLOOKUP/IF → INDEX-MATCH/SUMIF/COUNTIF → array formulas/XLOOKUP/dynamic arrays.
+        `You generate Excel formula problems at difficulty ${lvl}/10.
+ALWAYS include a small data table (4-5 rows, | separators), then ask what formula to write OR what a formula evaluates to. Include the concrete numerical/text answer.
+Scale: SUM/AVERAGE → VLOOKUP/IF → INDEX-MATCH/SUMIF → array/XLOOKUP.
 ${schema}`,
 
         // 3 Power BI / Tableau
         `You generate Power BI or Tableau problems at difficulty ${lvl}/10.
-Provide a business scenario with sample data context (describe table structure and a few key values), then ask to write a specific DAX measure (Power BI) OR a Tableau calculated field / LOD expression. The answer must be the complete formula.
-Scale: basic SUM/AVERAGE measures → CALCULATE/FILTER → time intelligence (DATEADD/SAMEPERIODLASTYEAR) → complex LODs/FIXED/INCLUDE. Alternate between BI tools each time.
+Give a business scenario, then ask for a specific DAX measure (Power BI) OR Tableau calculated field/LOD. Answer must be the complete formula.
+Scale: basic SUM/AVG → CALCULATE/FILTER → time intelligence → complex LODs. Alternate tools each time.
 ${schema}`,
 
         // 4 Python
-        `You generate Python coding problems at difficulty ${lvl}/10 for competitive programming and data skills.
-Include a clear problem statement and 2-3 concrete input → expected output examples. Answer must be complete working Python 3 code.
-Scale: basic I/O/loops/strings → lists/dicts/sets → algorithms (sorting, searching, recursion) → data structures/OOP/file handling.
+        `You generate Python coding problems at difficulty ${lvl}/10.
+Include a clear problem statement and 2-3 input → output examples. Answer must be complete Python 3 code.
+Scale: basic I/O/loops → lists/dicts → algorithms (sorting, recursion) → data structures/OOP.
 ${schema}`,
 
         // 5 Quant Aptitude
-        `You generate Quantitative Aptitude MCQ word problems at difficulty ${lvl}/10, Indian competitive exam style (CAT/SSC CGL/UPSC/IBPS Banking).
-Must be a word problem with specific numbers. Topics: profit & loss, percentage, ratio & proportion, time-speed-distance, time & work, SI/CI, averages, mixtures, P&C, probability, number theory, HCF/LCM.
-Provide 4 options labelled A) B) C) D). The answer must include the correct letter and the numeric value.
-${schema}`,
+        `You generate Quantitative Aptitude MCQ word problems at difficulty ${lvl}/10, Indian competitive exam style (CAT/SSC/UPSC/IBPS).
+Word problem with specific numbers. Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+Answer must include the correct letter AND numeric value. ${schema}`,
 
-        // 6 LR & DI
-        `You generate Logical Reasoning OR Data Interpretation MCQ problems at difficulty ${lvl}/10, Indian competitive exam style.
-For LR choose from: syllogisms, blood relations, seating arrangement (linear/circular), coding-decoding, number/letter series, analogies, direction sense, clocks, calendars, rankings.
-For DI: provide a small data table or bar/pie chart (described as text with 5-7 data points), then ask exactly 2 questions.
-Include 4 options A) B) C) D). Alternate between LR and DI each time.
+        // 6 LR & Data Interpretation
+        `You generate LR or DI MCQ problems at difficulty ${lvl}/10, Indian competitive exam style.
+Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
 ${schema}`,
 
         // 7 General Science
-        `You generate General Science applied/numerical problems at difficulty ${lvl}/10 (10th standard to JEE/NEET level).
-Choose one of: Physics (mechanics, electricity, optics, thermodynamics, modern physics), Chemistry (mole concept, stoichiometry, redox, electrochemistry, organic reaction), Biology (Mendelian genetics calculation, physiology numbers, ecology).
-MUST be computational or application-based — not a pure definition. Include 4 options A) B) C) D) with the answer clearly labelled. Rotate subject each time.
+        `You generate General Science applied/numerical problems at difficulty ${lvl}/10 (10th to JEE/NEET level).
+Must be computational or application-based — not a pure definition.
+Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
 ${schema}`,
 
         // 8 Current Affairs & GK
-        `You generate Current Affairs and General Knowledge MCQ questions at difficulty ${lvl}/10, UPSC/GPSC/RPSC level.
-Topics: events from Past 1.5 year (from present date), Indian polity (Constitution/Parliament/Judiciary), latest economy(budget, niti ayog, revolutions) & government schemes, appointments and heads, geography & history of either India (Ancient-IVC, mauryan, gupta, medivial - mughal,Modern 1857-1947 & post-indepdence & for geography - national parks, rivers, mountains, climate & pollution international aggrements, desert, coastline) or Gujarat/Rajasthan(Ancient/Medivial/Modern) Only, science & technology(General Science - Physics, Chemistry, Biology), India specific current affairs (from last 8-10 months from present date) like international relations, important awards, sports, major summits, famous personalities, Art & Culture of either india or Gujarat/Rajasthan (Dance, festival,heritage, books & authors literature-Classical & Modern), Defense (Military exercise,nuclear program, ISRO, DRDO) etc.
-Include 4 options A) B) C) D). The explanation must also clarify why each wrong option is incorrect.
-${schema}`,
+        `You generate Current Affairs and GK MCQ questions at difficulty ${lvl}/10, UPSC/GPSC/RPSC level.
+Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+Explanation must clarify why each wrong option is incorrect (1 line each). ${schema}`,
 
         // 9 GATE CS
         `You generate GATE Computer Science MCQ problems at difficulty ${lvl}/10.
-Choose one topic each time: COA (cache/pipeline analysis, addressing modes, instruction cycles), OS (CPU scheduling calculations, page replacement algorithms, deadlock detection), CN (subnetting/VLSM, TCP/IP, routing — Dijkstra/Bellman-Ford), DSA (time/space complexity, tree/graph traversal trace, sorting algorithm step-by-step).
-MUST involve actual computation, numerical trace, or algorithm analysis — not a pure definition. Include 4 options A) B) C) D). Rotate topic each time.
+MUST involve actual computation, numerical trace, or algorithm analysis — not a definition.
+Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
 ${schema}`,
       ];
       return P[moduleId];
     }
 
-    function getModuleHistory(modId) {
-      if (!sessionHistory[modId]) {
-        sessionHistory[modId] = { topicHistory: [], signatureHistory: [], styleCursor: 0 };
-      }
-      return sessionHistory[modId];
-    }
-
-    function normalizeSignature(text) {
-      return (text || '').toLowerCase()
-        .replace(/\d+/g, '#')
-        .replace(/\s+/g, ' ')
-        .replace(/[^\w\s|]/g, '')
-        .trim()
-        .slice(0, 120);
-    }
-
-    function pickDifficulty(levelBase) {
-      const base = Math.round(levelBase);
-      const delta = [-1, 0, 0, 1][Math.floor(Math.random() * 4)];
-      return Math.min(10, Math.max(1, base + delta));
-    }
-
-    function buildVarietyInstruction(modId, difficulty) {
-      const h = getModuleHistory(modId);
-      const styles = [
-        'scenario-based',
-        'calculation-heavy',
-        'debug/fix-the-mistake',
-        'real-world business case',
-        'exam-style MCQ with twist',
-        'short but tricky'
-      ];
-      const style = styles[h.styleCursor % styles.length];
-      h.styleCursor++;
-      const recentTopics = h.topicHistory.slice(-4).join(' | ') || 'none';
-      const recentSigs = h.signatureHistory.slice(-4).join(' | ') || 'none';
-      return `Use effective difficulty ${difficulty}/10 (user level anchor is ${Math.round(S.levels[modId])}/10).
-Variety rules:
-- Produce a ${style} question.
-- Avoid repeating recent topics: ${recentTopics}
-- Avoid repeating recent templates/signatures: ${recentSigs}
-- Change nouns, setting, numeric values, and framing from prior questions.
-- If MCQ is expected for this module, ALWAYS include four options as separate lines: A) ... B) ... C) ... D) ...`;
-    }
-
-    function getQuantTopicInstruction() {
-      const quantTopics = [
-        'profit and loss',
-        'simple and compound interest',
-        'time-speed-distance including trains and boats',
-        'time and work including pipes & cisterns',
-        'mixture and alligation',
-        'number systems with HCF/LCM',
-        'averages',
-        'ratio and proportion',
-        'percentages',
-        'mensuration / geometry / trigonometry',
-        'calculus (basic derivative/integral application)',
-        'statistics and probability',
-        'permutation and combination'
-      ];
-      const h = getModuleHistory(5);
-      if (!h.quantCursor) h.quantCursor = 0;
-      const topic = quantTopics[h.quantCursor % quantTopics.length];
-      h.quantCursor++;
-      return `Mandatory quant topic for THIS question: ${topic}. Do not use profit/loss unless it is the selected topic.`;
-    }
-
-    function isCompleteProblem(obj) {
-      return obj && typeof obj.topic === 'string' && typeof obj.problem === 'string' &&
-        typeof obj.hint === 'string' && typeof obj.answer === 'string' && typeof obj.explanation === 'string';
-    }
-    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
+    // ═══════════════════════════════════════════════════
+    //  FIX #3: Robust MCQ extraction and rendering
+    // ═══════════════════════════════════════════════════
     function extractMcqOptions(problemText) {
-      const text = problemText || '';
+      if (!problemText) return [];
+      // Normalise: the JSON parse may have given us literal \n or real newlines
+      const text = problemText.replace(/\\n/g, '\n');
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
       const options = [];
+
       for (const line of lines) {
-        const m = line.match(/^([A-D])[\)\.\:-]\s*(.+)$/i);
-        if (m) options.push({ label: m[1].toUpperCase(), text: m[2] });
+        // Match: A) / A. / A: / A - text  (case insensitive, any of A B C D)
+        const m = line.match(/^([A-Da-d])\s*[\)\.\:\-]\s*(.+)$/);
+        if (m) {
+          options.push({ label: m[1].toUpperCase(), text: m[2].trim() });
+        }
       }
-      return options.length >= 4 ? options.slice(0, 4) : [];
+
+      // Deduplicate by label
+      const seen = new Set();
+      const unique = options.filter(o => { if (seen.has(o.label)) return false; seen.add(o.label); return true; });
+      return unique.length >= 2 ? unique : []; // show box if at least 2 options found
     }
 
     function renderMcqOptions(problemText) {
@@ -1122,23 +1323,48 @@ Variety rules:
       const box = document.getElementById('mcq-box');
       const wrap = document.getElementById('mcq-options');
       wrap.innerHTML = '';
+
       if (!opts.length) {
         box.style.display = 'none';
         return;
       }
-      opts.forEach((opt, i) => {
-        const id = `mcq-opt-${i}`;
-        const row = document.createElement('label');
-        row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg2)';
-        row.innerHTML = `<input type="radio" name="mcq-choice" value="${opt.label}" id="${id}" style="width:auto;margin-top:2px"><span><b>${opt.label})</b> ${opt.text}</span>`;
-        wrap.appendChild(row);
+
+      // Clear any previously selected radio
+      opts.forEach(opt => {
+        const label = document.createElement('label');
+        label.className = 'mcq-option-label';
+        label.style.setProperty('--accent', currentMod ? currentMod.accent : '#378ADD');
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'mcq-choice';
+        radio.value = opt.label;
+
+        const letter = document.createElement('span');
+        letter.className = 'opt-letter';
+        letter.textContent = opt.label + ')';
+
+        const text = document.createElement('span');
+        text.textContent = opt.text;
+
+        label.appendChild(radio);
+        label.appendChild(letter);
+        label.appendChild(text);
+        wrap.appendChild(label);
       });
+
       box.style.display = 'block';
     }
 
     function useSelectedOption() {
       const picked = document.querySelector('input[name="mcq-choice"]:checked');
-      if (!picked) return;
+      if (!picked) {
+        // Briefly highlight the box to signal "please select one"
+        const box = document.getElementById('mcq-box');
+        box.style.outline = '2px solid #E24B4A';
+        setTimeout(() => { box.style.outline = ''; }, 800);
+        return;
+      }
       const area = document.getElementById('answer-input');
       area.value = picked.value;
       area.focus();
@@ -1147,7 +1373,7 @@ Variety rules:
     function getEvalPrompt() {
       return `You evaluate student answers for competitive exam and data skill practice. Be encouraging, precise, and fair. Give partial credit for partial understanding.
 Return ONLY valid JSON (no markdown fences, no extra text):
-{"correct":true_or_false,"score":0_to_100,"verdict":"Correct! / Partially Correct / Incorrect","feedback":"2-3 sentences addressing specifically what they got right or wrong","tip":"one key learning point or improvement suggestion"}`;
+{"correct":true_or_false,"score":0_to_100,"verdict":"Correct! / Partially Correct / Incorrect","feedback":"2-3 sentences on what they got right or wrong","tip":"one key learning point"}`;
     }
 
     // ═══════════════════════════════════════════════════
@@ -1163,13 +1389,13 @@ Return ONLY valid JSON (no markdown fences, no extra text):
     // ═══════════════════════════════════════════════════
     const PROVIDER_INFO = {
       gemini: `<b>Google Gemini</b> — Free tier: 15 req/min, 1,500 req/day. Default model: <code>gemini-2.0-flash-lite</code> (free & fast).<br>
-Other free models you can type in: <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash-001</code>.<br>
+Other free models: <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash-001</code>.<br>
 Get your free key → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>`,
       groq: `<b>Groq</b> — Very fast, generous free tier. Default model: <code>llama-3.3-70b-versatile</code>.<br>
 Get your free key → <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>`,
-      openrouter: `<b>OpenRouter</b> — Aggregates many models, several free ones. Default: <code>meta-llama/llama-3.1-8b-instruct:free</code>.<br>
+      openrouter: `<b>OpenRouter</b> — Aggregates many models. Default: <code>meta-llama/llama-3.1-8b-instruct:free</code>.<br>
 Get your free key → <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a><br>
-Other good free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mistralai/mistral-7b-instruct:free</code>`,
+Other free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mistralai/mistral-7b-instruct:free</code>`,
     };
 
     let selectedProvider = localStorage.getItem('dph_provider') || 'gemini';
@@ -1245,7 +1471,26 @@ Other good free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mis
       generateProblem();
     }
 
+    // FIX #4: Reset hint immediately at start of generateProblem (before async, so switching modules always clears it)
+    function resetProblemUI() {
+      document.getElementById('hint-box').style.display = 'none';
+      document.getElementById('hint-box').textContent = '';
+      document.getElementById('hint-toggle-btn').textContent = 'Show hint 💡';
+      document.getElementById('mcq-box').style.display = 'none';
+      document.getElementById('mcq-options').innerHTML = '';
+      document.getElementById('answer-input').value = '';
+      document.getElementById('answer-error').style.display = 'none';
+      document.getElementById('answer-section').style.display = 'block';
+      document.getElementById('answer-reveal').classList.remove('visible');
+      document.getElementById('submit-btn').disabled = false;
+      document.getElementById('submit-btn').textContent = 'Submit answer';
+      if (currentMod) document.getElementById('submit-btn').style.setProperty('--accent', currentMod.accent);
+    }
+
     async function generateProblem() {
+      // FIX #4: Reset UI immediately — before the async call — so hint/MCQ state always clears on new problem
+      resetProblemUI();
+
       document.getElementById('prob-loading').style.display = 'block';
       document.getElementById('prob-content').style.display = 'none';
       document.getElementById('prob-error').style.display = 'none';
@@ -1259,54 +1504,56 @@ Other good free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mis
       try {
         let parsed = null;
         let lastErr = null;
-        for (let attempt = 1; attempt <= 2; attempt++) {
+
+        // FIX #1: Build per-module extra topic instruction outside loop so cursor only advances once
+        let extraInstruction = '';
+        if (currentMod.id === 5) extraInstruction = `\n${getQuantTopicInstruction()}`;
+        else if (currentMod.id === 9) extraInstruction = `\n${getGateTopicInstruction()}`;
+        else if (currentMod.id === 7) extraInstruction = `\n${getScienceTopicInstruction()}`;
+        else if (currentMod.id === 8) extraInstruction = `\n${getGKTopicInstruction()}`;
+        else if (currentMod.id === 6) extraInstruction = `\n${getLRDITypeInstruction()}`;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            const extra = currentMod.id === 5 ? `\n${getQuantTopicInstruction()}` : '';
+            // FIX #1: Use strongSeed() for true entropy on every retry
             const raw = await callAI(
               getSysPrompt(currentMod.id, effectiveDifficulty),
               `${buildVarietyInstruction(currentMod.id, effectiveDifficulty)}
-Generate one fresh, creative, varied problem.
-Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}${extra}`
+Generate one fresh, creative, varied problem now.
+Entropy seed (ignore value, ensures uniqueness): ${strongSeed()}${extraInstruction}`
             );
             parsed = safeParseJSON(raw);
-            if (!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema.');
+            if (!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema — missing required fields.');
             break;
           } catch (err) {
             lastErr = err;
-            if (String(err.message || '').includes('RATE_LIMIT') && attempt < 2) {
-              await sleep(1200);
-            }
+            const msg = String(err.message || '');
+            if (msg.includes('RATE_LIMIT') && attempt < 3) await sleep(1500 * attempt);
+            else if (attempt < 3) await sleep(400);
           }
         }
-        if (!parsed) throw lastErr || new Error('Problem generation failed.');
+        if (!parsed) throw lastErr || new Error('Problem generation failed after retries.');
         currentProblem = parsed;
 
+        // Update history
         const h = getModuleHistory(currentMod.id);
         h.topicHistory.push((currentProblem.topic || '').trim());
         h.signatureHistory.push(normalizeSignature(currentProblem.problem));
-        h.topicHistory = h.topicHistory.slice(-8);
-        h.signatureHistory = h.signatureHistory.slice(-8);
+        h.topicHistory = h.topicHistory.slice(-10);
+        h.signatureHistory = h.signatureHistory.slice(-10);
 
-        // populate
+        // Populate problem UI
         const isCode = CODE_MODULES.has(currentMod.id);
         document.getElementById('prob-topic').textContent = currentProblem.topic;
         const stmt = document.getElementById('prob-statement');
         stmt.textContent = currentProblem.problem;
         stmt.className = isCode ? 'code-text' : 'problem-text';
 
-        // reset UI
-        document.getElementById('hint-box').style.display = 'none';
-        document.getElementById('hint-toggle-btn').textContent = 'Show hint 💡';
         document.getElementById('hint-box').textContent = currentProblem.hint;
-        renderMcqOptions(currentProblem.problem);
-        document.getElementById('answer-input').value = '';
         document.getElementById('answer-input').style.fontFamily = isCode ? 'var(--mono)' : 'var(--font)';
-        document.getElementById('answer-error').style.display = 'none';
-        document.getElementById('answer-section').style.display = 'block';
-        document.getElementById('answer-reveal').classList.remove('visible');
-        document.getElementById('submit-btn').disabled = false;
-        document.getElementById('submit-btn').textContent = 'Submit answer';
-        document.getElementById('submit-btn').style.setProperty('--accent', currentMod.accent);
+
+        // FIX #3: Render MCQ options — always attempt extraction, show box when options found
+        renderMcqOptions(currentProblem.problem);
 
         document.getElementById('prob-loading').style.display = 'none';
         document.getElementById('prob-content').style.display = 'block';
@@ -1326,11 +1573,17 @@ Seed: ${Date.now()}-${Math.random().toFixed(9)}-a${attempt}${extra}`
       renderHome();
     }
 
+    // FIX #4: toggleHint only operates on current state — already reset properly by resetProblemUI
     function toggleHint() {
       const h = document.getElementById('hint-box');
       const btn = document.getElementById('hint-toggle-btn');
-      if (h.style.display === 'none') { h.style.display = 'block'; btn.textContent = 'Hide hint 💡'; }
-      else { h.style.display = 'none'; btn.textContent = 'Show hint 💡'; }
+      if (h.style.display === 'none') {
+        h.style.display = 'block';
+        btn.textContent = 'Hide hint 💡';
+      } else {
+        h.style.display = 'none';
+        btn.textContent = 'Show hint 💡';
+      }
     }
 
     function skipProblem() {
