@@ -6,1707 +6,1166 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Practice Hub</title>
   <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#ffffff;--bg2:#f5f5f4;--bg3:#f0ede8;
+      --text:#1a1a1a;--text2:#555;--text3:#888;
+      --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+      --radius:10px;--radius-lg:14px;
+      --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      --mono:'SF Mono','Fira Code','Courier New',monospace;
+      --shadow:0 1px 4px rgba(0,0,0,0.08)
     }
-
-    :root {
-      --bg: #ffffff;
-      --bg2: #f5f5f4;
-      --bg3: #f0ede8;
-      --text: #1a1a1a;
-      --text2: #555;
-      --text3: #888;
-      --border: rgba(0, 0, 0, 0.12);
-      --border2: rgba(0, 0, 0, 0.22);
-      --radius: 10px;
-      --radius-lg: 14px;
-      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --mono: 'SF Mono', 'Fira Code', 'Courier New', monospace;
-      --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    }
-
-    @media(prefers-color-scheme:dark) {
-      :root {
-        --bg: #1c1c1e;
-        --bg2: #2c2c2e;
-        --bg3: #3a3a3c;
-        --text: #f2f2f7;
-        --text2: #aeaeb2;
-        --text3: #636366;
-        --border: rgba(255, 255, 255, 0.1);
-        --border2: rgba(255, 255, 255, 0.2);
-        --shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    @media(prefers-color-scheme:dark){
+      :root{
+        --bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;
+        --text:#f2f2f7;--text2:#aeaeb2;--text3:#636366;
+        --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+        --shadow:0 1px 4px rgba(0,0,0,0.4)
       }
     }
-
-    html {
-      font-size: 15px;
-      font-family: var(--font);
-      background: var(--bg3);
-      color: var(--text);
-      min-height: 100vh
-    }
-
-    body {
-      min-height: 100vh;
-      background: var(--bg3)
-    }
-
-    .screen {
-      display: none;
-      min-height: 100vh
-    }
-
-    .screen.active {
-      display: block
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 16px
-    }
-
-    /* TOPBAR */
-    .topbar {
-      background: var(--bg);
-      border-bottom: 0.5px solid var(--border);
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      position: sticky;
-      top: 0;
-      z-index: 10
-    }
-
-    .topbar-title {
-      font-size: 15px;
-      font-weight: 500;
-      flex: 1
-    }
-
-    .topbar-sub {
-      font-size: 12px;
-      color: var(--text2);
-      flex: 1
-    }
-
-    .back-btn,
-    .icon-btn {
-      background: transparent;
-      border: 0.5px solid var(--border2);
-      color: var(--text2);
-      padding: 6px 12px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 12px;
-      font-family: var(--font)
-    }
-
-    .back-btn:hover,
-    .icon-btn:hover {
-      background: var(--bg2)
-    }
-
-    /* CARDS */
-    .card {
-      background: var(--bg);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 16px 18px;
-      margin-bottom: 12px
-    }
-
-    .card-accent {
-      border-left: 2.5px solid var(--accent, #888)
-    }
-
-    .label {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: .9px;
-      text-transform: uppercase;
-      color: var(--text3);
-      margin-bottom: 8px
-    }
-
-    /* BUTTONS */
-    .btn {
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 9px 18px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      border: none;
-      transition: opacity .15s, transform .1s
-    }
-
-    .btn:active {
-      transform: scale(.97)
-    }
-
-    .btn-primary {
-      background: var(--accent, #378ADD);
-      color: #fff
-    }
-
-    .btn-primary:disabled {
-      opacity: .4;
-      cursor: default
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text2);
-      border: 0.5px solid var(--border2)
-    }
-
-    .btn-ghost:hover {
-      background: var(--bg2)
-    }
-
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px
-    }
-
-    /* BADGE */
-    .badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 500;
-      padding: 2px 9px;
-      border-radius: 99px;
-      background: rgba(128, 128, 128, .12);
-      color: var(--text2)
-    }
-
-    /* INPUTS */
-    input,
-    select,
-    textarea {
-      font-family: var(--font);
-      font-size: 13px;
-      background: var(--bg2);
-      color: var(--text);
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 9px 12px;
-      width: 100%;
-      outline: none;
-      transition: border-color .15s
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-      border-color: var(--accent, #378ADD)
-    }
-
-    textarea {
-      resize: vertical;
-      line-height: 1.7
-    }
-
-    select option {
-      background: var(--bg)
-    }
-
-    .form-group {
-      margin-bottom: 16px
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text2);
-      margin-bottom: 6px
-    }
-
-    /* MODULE GRID */
-    .module-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
-      padding: 16px 0
-    }
-
-    .mod-card {
-      background: var(--bg);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: transform .15s, box-shadow .15s;
-      border-top: 2px solid var(--mod-accent)
-    }
-
-    .mod-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow)
-    }
-
-    .mod-card .emoji {
-      font-size: 18px;
-      margin-bottom: 8px
-    }
-
-    .mod-card .mod-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 4px;
-      line-height: 1.3
-    }
-
-    .mod-card .mod-sub {
-      font-size: 11px;
-      color: var(--text3);
-      margin-bottom: 10px
-    }
-
-    .mod-card .mod-badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 500;
-      padding: 2px 9px;
-      border-radius: 99px;
-      background: var(--mod-accent-light);
-      color: var(--mod-accent)
-    }
-
-    .mod-card .mod-stats {
-      font-size: 11px;
-      color: var(--text3);
-      margin-top: 7px
-    }
-
-    /* STATS BAR */
-    .stats-bar {
-      display: flex;
-      gap: 24px
-    }
-
-    .stat {
-      text-align: center
-    }
-
-    .stat-val {
-      font-size: 20px;
-      font-weight: 500;
-      color: var(--text)
-    }
-
-    .stat-lbl {
-      font-size: 11px;
-      color: var(--text3);
-      margin-top: 1px
-    }
-
-    /* PROBLEM */
-    pre.problem-text {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 14px;
-      line-height: 1.8;
-      color: var(--text);
-      font-family: var(--font);
-      margin: 0
-    }
-
-    pre.code-text {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 12px;
-      line-height: 1.75;
-      color: var(--text);
-      font-family: var(--mono);
-      margin: 0
-    }
-
-    .hint-box {
-      margin-bottom: 14px;
-      padding: 10px 14px;
-      background: var(--bg2);
-      border-radius: var(--radius);
-      font-size: 13px;
-      color: var(--text2);
-      line-height: 1.65;
-      border-left: 2px solid var(--border2)
-    }
-
-    /* MCQ OPTIONS */
-    .mcq-option-label {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      padding: 10px 14px;
-      border: 0.5px solid var(--border2);
-      border-radius: 9px;
-      cursor: pointer;
-      background: var(--bg2);
-      transition: background .12s, border-color .12s;
-      line-height: 1.6;
-      font-size: 13px;
-      color: var(--text)
-    }
-
-    .mcq-option-label:hover {
-      background: var(--bg3);
-      border-color: var(--accent, #378ADD)
-    }
-
-    .mcq-option-label input[type="radio"] {
-      width: auto;
-      margin-top: 3px;
-      flex-shrink: 0;
-      accent-color: var(--accent, #378ADD)
-    }
-
-    .mcq-option-label .opt-letter {
-      font-weight: 600;
-      color: var(--accent, #378ADD);
-      flex-shrink: 0;
-      min-width: 18px
-    }
-
-    /* FEEDBACK SCORE */
-    .score-big {
-      text-align: center;
-      padding: 28px 20px
-    }
-
-    .score-num {
-      font-size: 64px;
-      font-weight: 500;
-      line-height: 1;
-      color: var(--score-color, #639922)
-    }
-
-    .score-verdict {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--text);
-      margin: 10px 0 7px
-    }
-
-    .score-feedback {
-      font-size: 13px;
-      color: var(--text2);
-      line-height: 1.7;
-      max-width: 480px;
-      margin: 0 auto
-    }
-
-    .score-tip {
-      margin-top: 14px;
-      padding: 9px 16px;
-      background: var(--bg2);
-      border-radius: var(--radius);
-      font-size: 13px;
-      color: var(--text2);
-      display: inline-block;
-      max-width: 520px
-    }
-
-    /* SETTINGS */
-    .settings-wrap {
-      max-width: 520px;
-      margin: 0 auto;
-      padding: 24px 16px
-    }
-
-    .settings-wrap h2 {
-      font-size: 18px;
-      font-weight: 500;
-      margin-bottom: 6px
-    }
-
-    .settings-wrap p {
-      font-size: 13px;
-      color: var(--text2);
-      line-height: 1.7;
-      margin-bottom: 24px
-    }
-
-    .provider-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 16px
-    }
-
-    .provider-opt {
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 12px 10px;
-      cursor: pointer;
-      text-align: center;
-      transition: border-color .15s
-    }
-
-    .provider-opt.selected {
-      border: 2px solid var(--accent, #378ADD);
-      background: rgba(55, 138, 221, .07)
-    }
-
-    .provider-opt .pname {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text)
-    }
-
-    .provider-opt .pfree {
-      font-size: 10px;
-      color: #639922;
-      margin-top: 3px
-    }
-
-    .provider-opt .pnote {
-      font-size: 10px;
-      color: var(--text3);
-      margin-top: 2px
-    }
-
-    .info-box {
-      background: var(--bg2);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      font-size: 12px;
-      color: var(--text2);
-      line-height: 1.75;
-      margin-bottom: 16px
-    }
-
-    .info-box a {
-      color: var(--accent, #378ADD);
-      text-decoration: none
-    }
-
-    .info-box a:hover {
-      text-decoration: underline
-    }
-
-    /* LOADING */
-    .loading-box {
-      text-align: center;
-      padding: 56px 20px
-    }
-
-    .spinner {
-      width: 28px;
-      height: 28px;
-      border: 2px solid var(--border2);
-      border-top-color: var(--accent, #378ADD);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 16px
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg)
-      }
-    }
-
-    .loading-msg {
-      font-size: 13px;
-      color: var(--text2)
-    }
-
-    .loading-sub {
-      font-size: 12px;
-      color: var(--text3);
-      margin-top: 5px
-    }
-
-    /* ERROR BOX */
-    .error-box {
-      background: rgba(226, 75, 74, .08);
-      border: 0.5px solid rgba(226, 75, 74, .3);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      font-size: 13px;
-      color: #A32D2D;
-      line-height: 1.65;
-      margin-bottom: 14px
-    }
-
-    /* FOOTER NOTE */
-    .footer-note {
-      text-align: center;
-      padding: 16px;
-      font-size: 11px;
-      color: var(--text3)
-    }
-
-    /* HOME HEADER */
-    .home-header {
-      background: var(--bg);
-      border-bottom: 0.5px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center
-    }
-
-    .home-header .ht {
-      font-size: 17px;
-      font-weight: 500
-    }
-
-    .home-header .hd {
-      font-size: 12px;
-      color: var(--text3);
-      margin-top: 2px
-    }
-
-    /* PROGRESS BAR */
-    .progress-bar-wrap {
-      height: 4px;
-      background: var(--bg3);
-      border-radius: 99px;
-      margin-top: 8px;
-      overflow: hidden
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width .4s
-    }
-
-    /* TOPIC BADGE */
-    .topic-tag {
-      display: inline-block;
-      font-size: 11px;
-      padding: 3px 11px;
-      border-radius: 99px;
-      background: var(--bg2);
-      color: var(--text3);
-      border: 0.5px solid var(--border);
-      margin-bottom: 12px
-    }
-
-    /* SKIP ANSWER */
-    .answer-reveal {
-      display: none
-    }
-
-    .answer-reveal.visible {
-      display: block
-    }
-
-    /* LEVEL PROGRESS IN MOD HEADER */
-    .mod-header-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      overflow: hidden
-    }
-
-    /* responsive */
-    @media(max-width:500px) {
-      .provider-grid {
-        grid-template-columns: 1fr
-      }
-
-      .stats-bar {
-        gap: 16px
-      }
-
-      .stat-val {
-        font-size: 16px
-      }
+    html{font-size:15px;font-family:var(--font);background:var(--bg3);color:var(--text);min-height:100vh}
+    body{min-height:100vh;background:var(--bg3)}
+    .screen{display:none;min-height:100vh}
+    .screen.active{display:block}
+    .container{max-width:900px;margin:0 auto;padding:0 16px}
+    .topbar{background:var(--bg);border-bottom:0.5px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+    .back-btn,.icon-btn{background:transparent;border:0.5px solid var(--border2);color:var(--text2);padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-size:12px;font-family:var(--font)}
+    .back-btn:hover,.icon-btn:hover{background:var(--bg2)}
+    .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:12px}
+    .card-accent{border-left:2.5px solid var(--accent,#888)}
+    .label{font-size:10px;font-weight:500;letter-spacing:.9px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+    .btn{font-family:var(--font);font-size:13px;font-weight:500;padding:9px 18px;border-radius:var(--radius);cursor:pointer;border:none;transition:opacity .15s,transform .1s}
+    .btn:active{transform:scale(.97)}
+    .btn-primary{background:var(--accent,#378ADD);color:#fff}
+    .btn-primary:disabled{opacity:.4;cursor:default}
+    .btn-ghost{background:transparent;color:var(--text2);border:0.5px solid var(--border2)}
+    .btn-ghost:hover{background:var(--bg2)}
+    .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 9px;border-radius:99px;background:rgba(128,128,128,.12);color:var(--text2)}
+    input,select,textarea{font-family:var(--font);font-size:13px;background:var(--bg2);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);padding:9px 12px;width:100%;outline:none;transition:border-color .15s}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent,#378ADD)}
+    textarea{resize:vertical;line-height:1.7}
+    select option{background:var(--bg)}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+    .module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:16px 0}
+    .mod-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;border-top:2px solid var(--mod-accent)}
+    .mod-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .mod-card .emoji{font-size:18px;margin-bottom:8px}
+    .mod-card .mod-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;line-height:1.3}
+    .mod-card .mod-sub{font-size:11px;color:var(--text3);margin-bottom:10px}
+    .mod-card .mod-badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 9px;border-radius:99px;background:var(--mod-accent-light);color:var(--mod-accent)}
+    .mod-card .mod-stats{font-size:11px;color:var(--text3);margin-top:7px}
+    .stats-bar{display:flex;gap:24px}
+    .stat{text-align:center}
+    .stat-val{font-size:20px;font-weight:500;color:var(--text)}
+    .stat-lbl{font-size:11px;color:var(--text3);margin-top:1px}
+    pre.problem-text{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.8;color:var(--text);font-family:var(--font);margin:0}
+    pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.75;color:var(--text);font-family:var(--mono);margin:0}
+    .hint-box{margin-bottom:14px;padding:10px 14px;background:var(--bg2);border-radius:var(--radius);font-size:13px;color:var(--text2);line-height:1.65;border-left:2px solid var(--border2)}
+    /* MCQ */
+    .mcq-option-label{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border:0.5px solid var(--border2);border-radius:9px;cursor:pointer;background:var(--bg2);transition:background .12s,border-color .12s;line-height:1.6;font-size:13px;color:var(--text)}
+    .mcq-option-label:hover{background:var(--bg3);border-color:var(--accent,#378ADD)}
+    .mcq-option-label input[type="radio"]{width:auto;margin-top:3px;flex-shrink:0;accent-color:var(--accent,#378ADD)}
+    .mcq-option-label .opt-letter{font-weight:600;color:var(--accent,#378ADD);flex-shrink:0;min-width:20px}
+    .score-big{text-align:center;padding:28px 20px}
+    .score-num{font-size:64px;font-weight:500;line-height:1}
+    .score-verdict{font-size:16px;font-weight:500;color:var(--text);margin:10px 0 7px}
+    .score-feedback{font-size:13px;color:var(--text2);line-height:1.7;max-width:480px;margin:0 auto}
+    .score-tip{margin-top:14px;padding:9px 16px;background:var(--bg2);border-radius:var(--radius);font-size:13px;color:var(--text2);display:inline-block;max-width:520px}
+    .settings-wrap{max-width:520px;margin:0 auto;padding:24px 16px}
+    .settings-wrap h2{font-size:18px;font-weight:500;margin-bottom:6px}
+    .settings-wrap p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:24px}
+    .provider-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+    .provider-opt{border:0.5px solid var(--border2);border-radius:var(--radius);padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .15s}
+    .provider-opt.selected{border:2px solid var(--accent,#378ADD);background:rgba(55,138,221,.07)}
+    .provider-opt .pname{font-size:13px;font-weight:500;color:var(--text)}
+    .provider-opt .pfree{font-size:10px;color:#639922;margin-top:3px}
+    .provider-opt .pnote{font-size:10px;color:var(--text3);margin-top:2px}
+    .info-box{background:var(--bg2);border-radius:var(--radius);padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.75;margin-bottom:16px}
+    .info-box a{color:var(--accent,#378ADD);text-decoration:none}
+    .info-box a:hover{text-decoration:underline}
+    .loading-box{text-align:center;padding:56px 20px}
+    .spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent,#378ADD);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-msg{font-size:13px;color:var(--text2)}
+    .loading-sub{font-size:12px;color:var(--text3);margin-top:5px}
+    .error-box{background:rgba(226,75,74,.08);border:0.5px solid rgba(226,75,74,.3);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:#A32D2D;line-height:1.65;margin-bottom:14px}
+    .footer-note{text-align:center;padding:16px;font-size:11px;color:var(--text3)}
+    .home-header{background:var(--bg);border-bottom:0.5px solid var(--border);padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+    .home-header .ht{font-size:17px;font-weight:500}
+    .home-header .hd{font-size:12px;color:var(--text3);margin-top:2px}
+    .progress-bar-wrap{height:4px;background:var(--bg3);border-radius:99px;margin-top:8px;overflow:hidden}
+    .progress-bar-fill{height:100%;border-radius:99px;transition:width .4s}
+    .topic-tag{display:inline-block;font-size:11px;padding:3px 11px;border-radius:99px;background:var(--bg2);color:var(--text3);border:0.5px solid var(--border);margin-bottom:12px}
+    .answer-reveal{display:none}
+    .answer-reveal.visible{display:block}
+    .mod-header-info{display:flex;align-items:center;gap:8px;flex:1;overflow:hidden}
+    @media(max-width:500px){
+      .provider-grid{grid-template-columns:1fr}
+      .stats-bar{gap:16px}
+      .stat-val{font-size:16px}
     }
   </style>
 </head>
-
 <body>
 
-  <!-- ═══════════════ SETTINGS SCREEN ═══════════════ -->
-  <div id="screen-settings" class="screen">
-    <div class="settings-wrap">
-      <h2>Welcome to Daily Practice Hub</h2>
-      <p>Choose an AI provider and paste your API key to get started. All data is saved locally in your browser. You
-        only need internet to generate problems.</p>
-
-      <div class="form-group">
-        <label>AI Provider</label>
-        <div class="provider-grid">
-          <div class="provider-opt selected" data-provider="gemini" onclick="selectProvider('gemini',this)">
-            <div class="pname">Google Gemini</div>
-            <div class="pfree">Free tier available</div>
-            <div class="pnote">gemini-2.0-flash-lite</div>
-          </div>
-          <div class="provider-opt" data-provider="groq" onclick="selectProvider('groq',this)">
-            <div class="pname">Groq</div>
-            <div class="pfree">Free tier</div>
-            <div class="pnote">Llama 3.3 70B</div>
-          </div>
-          <div class="provider-opt" data-provider="openrouter" onclick="selectProvider('openrouter',this)">
-            <div class="pname">OpenRouter</div>
-            <div class="pfree">Free models</div>
-            <div class="pnote">Various models</div>
-          </div>
+<!-- ═══════════════ SETTINGS SCREEN ═══════════════ -->
+<div id="screen-settings" class="screen">
+  <div class="settings-wrap">
+    <h2>Welcome to Daily Practice Hub</h2>
+    <p>Choose an AI provider and paste your API key to get started. All data is saved locally in your browser.</p>
+    <div class="form-group">
+      <label>AI Provider</label>
+      <div class="provider-grid">
+        <div class="provider-opt selected" data-provider="gemini" onclick="selectProvider('gemini',this)">
+          <div class="pname">Google Gemini</div><div class="pfree">Free tier available</div><div class="pnote">gemini-2.0-flash-lite</div>
+        </div>
+        <div class="provider-opt" data-provider="groq" onclick="selectProvider('groq',this)">
+          <div class="pname">Groq</div><div class="pfree">Free tier</div><div class="pnote">Llama 3.3 70B</div>
+        </div>
+        <div class="provider-opt" data-provider="openrouter" onclick="selectProvider('openrouter',this)">
+          <div class="pname">OpenRouter</div><div class="pfree">Free models</div><div class="pnote">Various models</div>
         </div>
       </div>
+    </div>
+    <div id="provider-info" class="info-box"></div>
+    <div class="form-group">
+      <label id="key-label">API Key</label>
+      <input type="password" id="api-key-input" placeholder="Paste your API key here..." autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label>Model <span style="color:var(--text3);font-weight:400">(optional — leave blank to use default)</span></label>
+      <input type="text" id="model-input" placeholder="e.g. gemini-2.0-flash-lite"/>
+    </div>
+    <div id="settings-error" class="error-box" style="display:none"></div>
+    <button class="btn btn-primary" style="--accent:#378ADD;width:100%;font-size:14px;padding:11px" onclick="saveSettings()">Save &amp; Start Practising →</button>
+    <div style="margin-top:16px;font-size:12px;color:var(--text3);line-height:1.75;text-align:center">Your API key is stored only in this browser's localStorage — it never leaves your device except to call the provider directly.</div>
+  </div>
+</div>
 
-      <div id="provider-info" class="info-box"></div>
-
-      <div class="form-group">
-        <label id="key-label">API Key</label>
-        <input type="password" id="api-key-input" placeholder="Paste your API key here..." autocomplete="off" />
+<!-- ═══════════════ HOME SCREEN ═══════════════ -->
+<div id="screen-home" class="screen">
+  <div class="home-header">
+    <div><div class="ht">Daily Practice Hub</div><div class="hd" id="home-date"></div></div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="stats-bar">
+        <div class="stat"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Streak 🔥</div></div>
+        <div class="stat"><div class="stat-val" id="stat-solved">0</div><div class="stat-lbl">Solved</div></div>
+        <div class="stat"><div class="stat-val" id="stat-mods">0/10</div><div class="stat-lbl">Modules</div></div>
       </div>
+      <button class="icon-btn" onclick="showScreen('settings')" title="Settings">⚙</button>
+    </div>
+  </div>
+  <div class="container">
+    <div class="module-grid" id="module-grid"></div>
+    <div class="footer-note">Click any module to practice · Score ≥80% levels up · Ctrl+Enter to submit answers</div>
+  </div>
+</div>
 
-      <div class="form-group">
-        <label>Model <span style="color:var(--text3);font-weight:400">(optional — leave blank to use
-            default)</span></label>
-        <input type="text" id="model-input" placeholder="e.g. gemini-2.0-flash-lite" />
+<!-- ═══════════════ PROBLEM SCREEN ═══════════════ -->
+<div id="screen-problem" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goHome()">← Home</button>
+    <div class="mod-header-info">
+      <span id="prob-emoji" style="font-size:16px"></span>
+      <span id="prob-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
+      <span id="prob-levelbadge" class="badge"></span>
+    </div>
+    <button class="icon-btn" onclick="newProblem()">New 🔄</button>
+  </div>
+  <div class="container" style="padding-top:16px;padding-bottom:32px">
+    <div id="prob-loading" class="loading-box">
+      <div class="spinner"></div>
+      <div class="loading-msg">Generating your problem…</div>
+      <div class="loading-sub">A fresh applied problem is being crafted for you</div>
+    </div>
+    <div id="prob-error" class="error-box" style="display:none"></div>
+    <div id="prob-content" style="display:none">
+      <div id="prob-topic" class="topic-tag"></div>
+      <div class="card card-accent" id="prob-card" style="--accent:#378ADD">
+        <div class="label">Problem</div>
+        <pre id="prob-statement" class="problem-text"></pre>
       </div>
-
-      <div id="settings-error" class="error-box" style="display:none"></div>
-
-      <button class="btn btn-primary" style="--accent:#378ADD;width:100%;font-size:14px;padding:11px"
-        onclick="saveSettings()">Save &amp; Start Practising →</button>
-
-      <div style="margin-top:16px;font-size:12px;color:var(--text3);line-height:1.75;text-align:center">
-        Your API key is stored only in this browser's localStorage — it never leaves your device except to call the
-        provider directly.
+      <div style="margin-bottom:14px">
+        <button id="hint-toggle-btn" class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="toggleHint()">Show hint 💡</button>
+        <div id="hint-box" class="hint-box" style="display:none;margin-top:8px"></div>
+      </div>
+      <div id="mcq-box" class="card" style="display:none">
+        <div class="label">Choose Your Answer</div>
+        <div id="mcq-options" style="display:grid;gap:8px"></div>
+        <div style="margin-top:12px">
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="useSelectedOption()">✓ Use selected option in answer box</button>
+        </div>
+      </div>
+      <div id="answer-reveal" class="answer-reveal">
+        <div class="card card-accent" style="--accent:#639922">
+          <div class="label">Correct Answer</div>
+          <pre id="reveal-answer" class="problem-text"></pre>
+          <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border)">
+            <span style="font-weight:500;color:var(--text)">Explanation: </span>
+            <span id="reveal-explanation" style="font-size:13px;color:var(--text2);line-height:1.75"></span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="newProblem()">Next problem →</button>
+          <button class="btn btn-ghost" onclick="goHome()">← Home</button>
+        </div>
+      </div>
+      <div id="answer-section" class="card">
+        <div class="label">Your Answer</div>
+        <textarea id="answer-input" rows="6" placeholder="Type your answer here… (Ctrl+Enter to submit)" onkeydown="handleKey(event)"></textarea>
+        <div id="answer-error" class="error-box" style="display:none;margin-top:10px"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="submit-btn" onclick="submitAnswer()">Submit answer</button>
+          <button class="btn btn-ghost" onclick="skipProblem()">Skip / see answer</button>
+          <button class="btn btn-ghost" onclick="newProblem()">New problem 🔄</button>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3)">Ctrl+Enter to submit quickly</div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ═══════════════ HOME SCREEN ═══════════════ -->
-  <div id="screen-home" class="screen">
-    <div class="home-header">
-      <div>
-        <div class="ht">Daily Practice Hub</div>
-        <div class="hd" id="home-date"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div class="stats-bar">
-          <div class="stat">
-            <div class="stat-val" id="stat-streak">0</div>
-            <div class="stat-lbl">Streak 🔥</div>
-          </div>
-          <div class="stat">
-            <div class="stat-val" id="stat-solved">0</div>
-            <div class="stat-lbl">Solved</div>
-          </div>
-          <div class="stat">
-            <div class="stat-val" id="stat-mods">0/10</div>
-            <div class="stat-lbl">Modules</div>
-          </div>
-        </div>
-        <button class="icon-btn" onclick="showScreen('settings')" title="Settings">⚙</button>
-      </div>
-    </div>
-    <div class="container">
-      <div class="module-grid" id="module-grid"></div>
-      <div class="footer-note">Click any module to practice · Score ≥80% levels up · Ctrl+Enter to submit answers</div>
+<!-- ═══════════════ FEEDBACK SCREEN ═══════════════ -->
+<div id="screen-feedback" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goHome()">← Home</button>
+    <div class="mod-header-info">
+      <span id="fb-emoji" style="font-size:16px"></span>
+      <span id="fb-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
+      <span style="font-size:13px;color:var(--text3)">— Result</span>
     </div>
   </div>
-
-  <!-- ═══════════════ PROBLEM SCREEN ═══════════════ -->
-  <div id="screen-problem" class="screen">
-    <div class="topbar">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="mod-header-info">
-        <span id="prob-emoji" style="font-size:16px"></span>
-        <span id="prob-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
-        <span id="prob-levelbadge" class="badge"></span>
-      </div>
-      <button class="icon-btn" onclick="newProblem()">New 🔄</button>
+  <div class="container" style="padding-top:16px;padding-bottom:32px">
+    <div id="fb-loading" class="loading-box" style="display:none">
+      <div class="spinner"></div>
+      <div class="loading-msg">Evaluating your answer…</div>
     </div>
-
-    <div class="container" style="padding-top:16px;padding-bottom:32px">
-
-      <!-- Loading -->
-      <div id="prob-loading" class="loading-box">
-        <div class="spinner"></div>
-        <div class="loading-msg">Generating your problem…</div>
-        <div class="loading-sub">A fresh applied problem is being crafted for you</div>
+    <div id="fb-content" style="display:none">
+      <div class="card" id="fb-score-card">
+        <div class="score-big">
+          <div class="score-num" id="fb-score-num"></div>
+          <div class="score-verdict" id="fb-verdict"></div>
+          <div class="score-feedback" id="fb-feedback-text"></div>
+          <div class="score-tip" id="fb-tip" style="display:none"></div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="fb-progress-bar" style="background:#639922;width:0%"></div>
+        </div>
       </div>
-
-      <!-- Error -->
-      <div id="prob-error" class="error-box" style="display:none"></div>
-
-      <!-- Problem content -->
-      <div id="prob-content" style="display:none">
-        <div id="prob-topic" class="topic-tag"></div>
-
-        <!-- Statement card -->
-        <div class="card card-accent" id="prob-card" style="--accent:#378ADD">
-          <div class="label">Problem</div>
-          <pre id="prob-statement" class="problem-text"></pre>
-        </div>
-
-        <!-- Hint -->
-        <div style="margin-bottom:14px">
-          <button id="hint-toggle-btn" class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="toggleHint()">Show hint
-            💡</button>
-          <div id="hint-box" class="hint-box" style="display:none;margin-top:8px"></div>
-        </div>
-
-        <!-- FIX #3: Improved MCQ box with better styled options -->
-        <div id="mcq-box" class="card" style="display:none">
-          <div class="label">Choose Option</div>
-          <div id="mcq-options" style="display:grid;gap:8px"></div>
-          <div style="margin-top:12px">
-            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="useSelectedOption()">✓ Use selected option in answer box</button>
-          </div>
-        </div>
-
-        <!-- Answer shown after skip -->
-        <div id="answer-reveal" class="answer-reveal">
-          <div class="card card-accent" style="--accent:#639922">
-            <div class="label">Correct Answer</div>
-            <pre id="reveal-answer" class="problem-text"></pre>
-            <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border)">
-              <span style="font-weight:500;color:var(--text)">Explanation: </span>
-              <span id="reveal-explanation" style="font-size:13px;color:var(--text2);line-height:1.75"></span>
-            </div>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-primary" onclick="newProblem()">Next problem →</button>
-            <button class="btn btn-ghost" onclick="goHome()">← Home</button>
-          </div>
-        </div>
-
-        <!-- Answer input -->
-        <div id="answer-section" class="card">
-          <div class="label">Your Answer</div>
-          <textarea id="answer-input" rows="6" placeholder="Type your answer here… (Ctrl+Enter to submit)"
-            onkeydown="handleKey(event)"></textarea>
-          <div id="answer-error" class="error-box" style="display:none;margin-top:10px"></div>
-          <div class="btn-row">
-            <button class="btn btn-primary" id="submit-btn" onclick="submitAnswer()">Submit answer</button>
-            <button class="btn btn-ghost" onclick="skipProblem()">Skip / see answer</button>
-            <button class="btn btn-ghost" onclick="newProblem()">New problem 🔄</button>
-          </div>
-          <div style="margin-top:8px;font-size:11px;color:var(--text3)">Ctrl+Enter to submit quickly</div>
-        </div>
+      <div class="card">
+        <div class="label">Your answer</div>
+        <pre id="fb-your-answer" class="problem-text" style="color:var(--text2)"></pre>
+      </div>
+      <div class="card card-accent" id="fb-answer-card" style="--accent:#639922">
+        <div class="label">Correct answer</div>
+        <pre id="fb-correct-answer" class="problem-text"></pre>
+      </div>
+      <div class="card">
+        <div class="label">Explanation</div>
+        <pre id="fb-explanation" class="problem-text" style="color:var(--text2)"></pre>
+      </div>
+      <div class="btn-row" style="padding-bottom:8px">
+        <!-- FIX #1: Next problem button switches screen then generates -->
+        <button class="btn btn-primary" id="fb-next-btn" onclick="newProblem()">Next problem →</button>
+        <button class="btn btn-ghost" onclick="goHome()">← Back to home</button>
       </div>
     </div>
+    <div id="fb-error" class="error-box" style="display:none"></div>
   </div>
+</div>
 
-  <!-- ═══════════════ FEEDBACK SCREEN ═══════════════ -->
-  <div id="screen-feedback" class="screen">
-    <div class="topbar">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="mod-header-info">
-        <span id="fb-emoji" style="font-size:16px"></span>
-        <span id="fb-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
-        <span style="font-size:13px;color:var(--text3)">— Result</span>
-      </div>
-    </div>
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA — FIX #4: Renamed module 0, FIX #2: updated sub-labels
+// ═══════════════════════════════════════════════════
+const MODULES = [
+  { id:0, name:"Brain Teasers",           emoji:"🧠", accent:"#D85A30", sub:"Chess · Logic · Lateral Thinking" },
+  { id:1, name:"SQL",                     emoji:"🗄️", accent:"#378ADD", sub:"Analytics Queries · Joins · Window Fns" },
+  { id:2, name:"Excel",                   emoji:"📊", accent:"#639922", sub:"Data Analysis · Pivot · Power Query" },
+  { id:3, name:"Power BI / Tableau",      emoji:"📈", accent:"#7F77DD", sub:"DAX · LOD · Dashboards · KPIs" },
+  { id:4, name:"Python",                  emoji:"🐍", accent:"#1D9E75", sub:"Pandas · NumPy · EDA · ML Basics" },
+  { id:5, name:"Quant Aptitude",          emoji:"🔢", accent:"#BA7517", sub:"Math · Word Problems · MCQ" },
+  { id:6, name:"LR & Data Interpretation",emoji:"🧩", accent:"#D4537E", sub:"Logic · Patterns · DI Tables" },
+  { id:7, name:"General Science",         emoji:"🔬", accent:"#185FA5", sub:"Physics · Chemistry · Biology" },
+  { id:8, name:"Current Affairs & GK",    emoji:"🌐", accent:"#A32D2D", sub:"UPSC · GPSC · RPSC Level" },
+  { id:9, name:"GATE CS",                 emoji:"💻", accent:"#534AB7", sub:"COA · OS · CN · DSA" },
+];
 
-    <div class="container" style="padding-top:16px;padding-bottom:32px">
-      <!-- Loading eval -->
-      <div id="fb-loading" class="loading-box" style="display:none">
-        <div class="spinner"></div>
-        <div class="loading-msg">Evaluating your answer…</div>
-      </div>
+const LEVEL_LABELS = ["","Beginner","Beginner+","Easy","Easy+","Medium","Medium+","Hard","Hard+","Expert","Master"];
+const CODE_MODULES  = new Set([1,2,3,4,9]);
+// FIX #3: Every module in this set will always have MCQ box attempted
+const MCQ_MODULES   = new Set([5,6,7,8,9]);
 
-      <div id="fb-content" style="display:none">
-        <!-- Score card -->
-        <div class="card" id="fb-score-card">
-          <div class="score-big">
-            <div class="score-num" id="fb-score-num"></div>
-            <div class="score-verdict" id="fb-verdict"></div>
-            <div class="score-feedback" id="fb-feedback-text"></div>
-            <div class="score-tip" id="fb-tip" style="display:none"></div>
-          </div>
-          <div class="progress-bar-wrap">
-            <div class="progress-bar-fill" id="fb-progress-bar" style="background:#639922;width:0%"></div>
-          </div>
-        </div>
+function getLevelLabel(l){ return LEVEL_LABELS[Math.min(10,Math.round(l))]; }
 
-        <!-- Your answer -->
-        <div class="card">
-          <div class="label">Your answer</div>
-          <pre id="fb-your-answer" class="problem-text" style="color:var(--text2)"></pre>
-        </div>
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+function loadState(){
+  return {
+    levels:   JSON.parse(localStorage.getItem('dph_levels')   || JSON.stringify(MODULES.map(()=>1))),
+    attempts: JSON.parse(localStorage.getItem('dph_attempts') || JSON.stringify(MODULES.map(()=>0))),
+    scores:   JSON.parse(localStorage.getItem('dph_scores')   || JSON.stringify(MODULES.map(()=>0))),
+    streak:   parseInt(localStorage.getItem('dph_streak')||'0'),
+  };
+}
+function saveState(s){
+  localStorage.setItem('dph_levels',   JSON.stringify(s.levels));
+  localStorage.setItem('dph_attempts', JSON.stringify(s.attempts));
+  localStorage.setItem('dph_scores',   JSON.stringify(s.scores));
+  localStorage.setItem('dph_streak',   String(s.streak));
+}
+let S = loadState();
+let currentMod = null, currentProblem = null, lastAnswer = '';
+const sessionHistory = {};
 
-        <!-- Correct answer -->
-        <div class="card card-accent" id="fb-answer-card" style="--accent:#639922">
-          <div class="label">Correct answer</div>
-          <pre id="fb-correct-answer" class="problem-text"></pre>
-        </div>
+// ═══════════════════════════════════════════════════
+//  RANDOMISATION
+// ═══════════════════════════════════════════════════
+function strongSeed(){
+  const t = performance.now().toFixed(6);
+  const r = crypto.getRandomValues(new Uint32Array(2));
+  return `${Date.now()}-${t}-${r[0].toString(36)}-${r[1].toString(36)}`;
+}
 
-        <!-- Explanation -->
-        <div class="card">
-          <div class="label">Explanation</div>
-          <pre id="fb-explanation" class="problem-text" style="color:var(--text2)"></pre>
-        </div>
-
-        <div class="btn-row" style="padding-bottom:8px">
-          <button class="btn btn-primary" id="fb-next-btn" onclick="newProblem()">Next problem →</button>
-          <button class="btn btn-ghost" onclick="goHome()">← Back to home</button>
-        </div>
-      </div>
-
-      <div id="fb-error" class="error-box" style="display:none"></div>
-    </div>
-  </div>
-
-  <script>
-    // ═══════════════════════════════════════════════════
-    //  DATA
-    // ═══════════════════════════════════════════════════
-    const MODULES = [
-      { id: 0, name: "Exercise & Mental", emoji: "🏋️", accent: "#D85A30", sub: "Workout · Chess · Riddles" },
-      { id: 1, name: "SQL", emoji: "🗄️", accent: "#378ADD", sub: "Queries · Joins · Aggregations" },
-      { id: 2, name: "Excel", emoji: "📊", accent: "#639922", sub: "Formulas · Functions · Analysis" },
-      { id: 3, name: "Power BI / Tableau", emoji: "📈", accent: "#7F77DD", sub: "DAX · Calculated Fields · Viz" },
-      { id: 4, name: "Python", emoji: "🐍", accent: "#1D9E75", sub: "Coding & Problem Solving" },
-      { id: 5, name: "Quant Aptitude", emoji: "🔢", accent: "#BA7517", sub: "Math · Word Problems · MCQ" },
-      { id: 6, name: "LR & Data Interpretation", emoji: "🧩", accent: "#D4537E", sub: "Logic · Patterns · DI Tables" },
-      { id: 7, name: "General Science", emoji: "🔬", accent: "#185FA5", sub: "Physics · Chemistry · Biology" },
-      { id: 8, name: "Current Affairs & GK", emoji: "🌐", accent: "#A32D2D", sub: "UPSC · GPSC · RPSC Level" },
-      { id: 9, name: "GATE CS", emoji: "💻", accent: "#534AB7", sub: "COA · OS · CN · DSA" },
-    ];
-
-    const LEVEL_LABELS = ["", "Beginner", "Beginner+", "Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert", "Master"];
-    const CODE_MODULES = new Set([1, 2, 3, 4, 9]);
-    // Modules that always show MCQ options box
-    const MCQ_MODULES = new Set([5, 6, 7, 8, 9]);
-
-    function getLevelLabel(l) { return LEVEL_LABELS[Math.min(10, Math.round(l))]; }
-
-    // ═══════════════════════════════════════════════════
-    //  STATE  (persisted in localStorage)
-    // ═══════════════════════════════════════════════════
-    function loadState() {
-      return {
-        levels: JSON.parse(localStorage.getItem('dph_levels') || JSON.stringify(MODULES.map(() => 1))),
-        attempts: JSON.parse(localStorage.getItem('dph_attempts') || JSON.stringify(MODULES.map(() => 0))),
-        scores: JSON.parse(localStorage.getItem('dph_scores') || JSON.stringify(MODULES.map(() => 0))),
-        streak: parseInt(localStorage.getItem('dph_streak') || '0'),
-      };
-    }
-    function saveState(s) {
-      localStorage.setItem('dph_levels', JSON.stringify(s.levels));
-      localStorage.setItem('dph_attempts', JSON.stringify(s.attempts));
-      localStorage.setItem('dph_scores', JSON.stringify(s.scores));
-      localStorage.setItem('dph_streak', String(s.streak));
-    }
-
-    let S = loadState();
-    let currentMod = null;
-    let currentProblem = null;
-    let lastAnswer = '';
-    const sessionHistory = {};
-
-    // ═══════════════════════════════════════════════════
-    //  FIX #1: Stronger randomization helpers
-    // ═══════════════════════════════════════════════════
-
-    // Entropy pool: high-precision timestamp + crypto random
-    function strongSeed() {
-      const t = performance.now().toFixed(6);
-      const r = crypto.getRandomValues(new Uint32Array(2));
-      return `${Date.now()}-${t}-${r[0].toString(36)}-${r[1].toString(36)}`;
-    }
-
-    // Per-module counters stored in sessionHistory, NOT reset between problems of same module
-    function getModuleHistory(modId) {
-      if (!sessionHistory[modId]) {
-        sessionHistory[modId] = {
-          topicHistory: [],
-          signatureHistory: [],
-          styleCursor: Math.floor(Math.random() * 6), // start at random style
-          quantCursor: Math.floor(Math.random() * 13),
-          gateTopicCursor: Math.floor(Math.random() * 4),
-          lrdiCursor: Math.floor(Math.random() * 2),
-          scienceCursor: Math.floor(Math.random() * 3),
-          gkCursor: Math.floor(Math.random() * 8),
-        };
-      }
-      return sessionHistory[modId];
-    }
-
-    function normalizeSignature(text) {
-      return (text || '').toLowerCase()
-        .replace(/\d+/g, '#')
-        .replace(/\s+/g, ' ')
-        .replace(/[^\w\s|]/g, '')
-        .trim()
-        .slice(0, 120);
-    }
-
-    function pickDifficulty(levelBase) {
-      const base = Math.round(levelBase);
-      const delta = [-1, 0, 0, 1][Math.floor(Math.random() * 4)];
-      return Math.min(10, Math.max(1, base + delta));
-    }
-
-    // Shuffle an array (Fisher-Yates) — used to pick random framing words each call
-    function shuffle(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    const STYLE_POOL = [
-      'scenario-based with a real-world business context',
-      'calculation-heavy with multi-step working',
-      'debug-the-mistake: show wrong working, ask student to identify & fix the error',
-      'real-world Indian industry or government data case',
-      'exam-style with a deliberate twist or trap option',
-      'short and deceptively tricky',
-      'story-problem with a named character',
-      'comparison or "which is better" analysis',
-    ];
-
-    const SETTING_WORDS = shuffle([
-      'agriculture', 'e-commerce', 'fintech startup', 'railway network', 'hospital management',
-      'school results', 'cricket tournament', 'ISRO mission', 'stock brokerage', 'food delivery app',
-      'textile factory in Surat', 'sugar cooperative in Maharashtra', 'real estate in Ahmedabad',
-      'pharmaceutical company', 'solar energy plant', 'microfinance institution', 'logistics warehouse',
-    ]);
-    let settingCursor = 0;
-
-    function nextSetting() {
-      const s = SETTING_WORDS[settingCursor % SETTING_WORDS.length];
-      settingCursor++;
-      return s;
-    }
-
-    function buildVarietyInstruction(modId, difficulty) {
-      const h = getModuleHistory(modId);
-      const style = STYLE_POOL[h.styleCursor % STYLE_POOL.length];
-      h.styleCursor++;
-      const recentTopics = h.topicHistory.slice(-5).join(' | ') || 'none';
-      const recentSigs = h.signatureHistory.slice(-5).join(' | ') || 'none';
-      const setting = nextSetting();
-      // Pick 3 random number seeds to force numeric variation
-      const nums = [
-        Math.floor(Math.random() * 900 + 100),
-        Math.floor(Math.random() * 9000 + 1000),
-        (Math.random() * 40 + 5).toFixed(1)
-      ].join(', ');
-
-      return `Effective difficulty: ${difficulty}/10.
-VARIETY MANDATE (follow strictly):
-- Style: ${style}
-- Setting/domain: ${setting}
-- Seed numbers (use at least one of these values in the problem): ${nums}
-- BANNED recent topics (do NOT repeat): ${recentTopics}
-- BANNED recent patterns (do NOT repeat): ${recentSigs}
-- Change ALL of: character names, numeric values, units, industry context, and question framing vs. prior problems.
-- If MCQ: four options on SEPARATE lines prefixed exactly A) B) C) D) — make all distractors plausible.`;
-    }
-
-    // ═══════════════════════════════════════════════════
-    //  Topic rotation helpers (deterministic cycling + random offset)
-    // ═══════════════════════════════════════════════════
-    const QUANT_TOPICS = [
-      'profit and loss', 'simple and compound interest', 'time-speed-distance including trains and boats',
-      'time and work including pipes & cisterns', 'mixture and alligation', 'number systems with HCF/LCM',
-      'averages', 'ratio and proportion', 'percentages', 'mensuration / geometry / trigonometry',
-      'basic derivative or integral application', 'statistics and probability', 'permutation and combination'
-    ];
-    const GATE_TOPICS = [
-      'COA (cache miss/hit analysis, pipeline stages, addressing modes)',
-      'OS (CPU scheduling trace — Gantt chart with waiting time/turnaround, page replacement)',
-      'CN (subnetting/VLSM calculation, Dijkstra shortest path, TCP flow control)',
-      'DSA (Big-O analysis, tree/graph traversal trace, sorting algorithm step-by-step with comparisons)'
-    ];
-    const SCIENCE_TOPICS = [
-      'Physics (kinematics, Newton laws, work-energy, electricity, optics)',
-      'Chemistry (mole concept, stoichiometry, redox/electrochemistry, IUPAC naming)',
-      'Biology (Mendelian genetics Punnett square, physiology values, ecology energy flow)'
-    ];
-    const GK_TOPICS = [
-      'Indian Constitution (articles, schedules, amendments, landmark judgements)',
-      'Indian Economy (Union Budget highlights, NITI Aayog, Five-Year Plans legacy)',
-      'Current Affairs India — international relations, summits, agreements (last 8 months)',
-      'Geography of India (rivers, mountains, national parks, climate, coastline)',
-      'Gujarat/Rajasthan history and culture (Ancient/Medieval/Modern, dance, festival, heritage)',
-      'Science & Technology (ISRO missions, DRDO programs, nuclear milestones)',
-      'Awards, appointments and sports (Bharat Ratna, Olympics, major cups)',
-      'Art & Culture (classical music/dance, books & authors, UNESCO heritage India)'
-    ];
-    const LRDI_TYPES = ['LR', 'DI'];
-
-    function getQuantTopicInstruction() {
-      const h = getModuleHistory(5);
-      const topic = QUANT_TOPICS[h.quantCursor % QUANT_TOPICS.length];
-      h.quantCursor++;
-      return `MANDATORY quant topic for THIS question: "${topic}". Do NOT drift to another topic.`;
-    }
-    function getGateTopicInstruction() {
-      const h = getModuleHistory(9);
-      const topic = GATE_TOPICS[h.gateTopicCursor % GATE_TOPICS.length];
-      h.gateTopicCursor++;
-      return `MANDATORY GATE topic for THIS question: ${topic}.`;
-    }
-    function getScienceTopicInstruction() {
-      const h = getModuleHistory(7);
-      const topic = SCIENCE_TOPICS[h.scienceCursor % SCIENCE_TOPICS.length];
-      h.scienceCursor++;
-      return `MANDATORY science subject for THIS question: ${topic}.`;
-    }
-    function getGKTopicInstruction() {
-      const h = getModuleHistory(8);
-      const topic = GK_TOPICS[h.gkCursor % GK_TOPICS.length];
-      h.gkCursor++;
-      return `MANDATORY GK topic for THIS question: ${topic}.`;
-    }
-    function getLRDITypeInstruction() {
-      const h = getModuleHistory(6);
-      const type = LRDI_TYPES[h.lrdiCursor % 2];
-      h.lrdiCursor++;
-      return type === 'LR'
-        ? 'Generate an LR question. Choose exactly one sub-type: syllogism | blood relations | seating arrangement | coding-decoding | series | direction sense | clock/calendar | ranking.'
-        : 'Generate a DI question. Provide a compact data table (5-7 rows, plain text with | separators), then ask exactly 2 sub-questions.';
-    }
-
-    function isCompleteProblem(obj) {
-      return obj && typeof obj.topic === 'string' && typeof obj.problem === 'string' &&
-        typeof obj.hint === 'string' && typeof obj.answer === 'string' && typeof obj.explanation === 'string';
-    }
-    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-    // ═══════════════════════════════════════════════════
-    //  FIX #2: Robust JSON parser — handles truncation & bad escapes
-    // ═══════════════════════════════════════════════════
-    function repairJSON(raw) {
-      if (!raw || typeof raw !== 'string') throw new Error('Empty response from model.');
-
-      let s = raw.trim()
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```\s*$/i, '')
-        .trim();
-
-      // Attempt 1: straight parse
-      try { return JSON.parse(s); } catch (_) { }
-
-      // Attempt 2: extract outermost { ... }
-      const start = s.indexOf('{');
-      const end = s.lastIndexOf('}');
-      if (start !== -1 && end > start) {
-        let candidate = s.slice(start, end + 1);
-
-        // Fix bad escape sequences (lone backslashes not followed by valid escape chars)
-        candidate = candidate.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
-
-        // Fix trailing commas before ] or }
-        candidate = candidate.replace(/,\s*([}\]])/g, '$1');
-
-        // Remove null bytes
-        candidate = candidate.replace(/\u0000/g, '');
-
-        try { return JSON.parse(candidate); } catch (_) { }
-
-        // Attempt 3: the JSON may be truncated mid-string — try to close open strings and braces
-        let fixed = candidate;
-
-        // Count unclosed quotes — if odd number, add a closing quote
-        const quoteCount = (fixed.match(/(?<!\\)"/g) || []).length;
-        if (quoteCount % 2 !== 0) fixed += '"';
-
-        // Close any unclosed braces/brackets
-        const opens = (fixed.match(/\{/g) || []).length;
-        const closes = (fixed.match(/\}/g) || []).length;
-        const brackets = (fixed.match(/\[/g) || []).length;
-        const bracketCloses = (fixed.match(/\]/g) || []).length;
-
-        fixed += ']'.repeat(Math.max(0, brackets - bracketCloses));
-        fixed += '}'.repeat(Math.max(0, opens - closes));
-
-        // Remove trailing comma before added closing
-        fixed = fixed.replace(/,\s*([}\]])/g, '$1');
-
-        try { return JSON.parse(fixed); } catch (_) { }
-      }
-
-      throw new Error('Model returned malformed JSON. The response may have been cut off. Please retry.');
-    }
-
-    function safeParseJSON(raw) {
-      const parsed = repairJSON(raw);
-      // Sanitise field values — ensure no raw newlines break things later
-      for (const key of ['topic', 'problem', 'hint', 'answer', 'explanation']) {
-        if (parsed[key] && typeof parsed[key] === 'string') {
-          // Replace literal \n escape sequences (if model double-escaped them) with real newlines
-          parsed[key] = parsed[key].replace(/\\n/g, '\n');
-        }
-      }
-      return parsed;
-    }
-
-    // ═══════════════════════════════════════════════════
-    //  API
-    // ═══════════════════════════════════════════════════
-    const PROVIDER_DEFAULTS = {
-      gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}', model: 'gemini-2.5-flash' },
-      groq: { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' },
-      openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'meta-llama/llama-3.1-8b-instruct:free' },
+function getModuleHistory(modId){
+  if(!sessionHistory[modId]){
+    sessionHistory[modId]={
+      topicHistory:[], signatureHistory:[],
+      styleCursor:    Math.floor(Math.random()*8),
+      quantCursor:    Math.floor(Math.random()*13),
+      gateTopicCursor:Math.floor(Math.random()*4),
+      lrdiCursor:     Math.floor(Math.random()*2),
+      scienceCursor:  Math.floor(Math.random()*3),
+      gkCursor:       Math.floor(Math.random()*8),
+      brainCursor:    Math.floor(Math.random()*3),
     };
+  }
+  return sessionHistory[modId];
+}
 
-    async function callAI(systemPrompt, userMsg, maxTokens = 2200) {
-      const provider = localStorage.getItem('dph_provider') || 'gemini';
-      const key = localStorage.getItem('dph_apiKey') || '';
-      const def = PROVIDER_DEFAULTS[provider];
-      const model = (localStorage.getItem('dph_model') || '').trim() || def.model;
+function normalizeSignature(text){
+  return (text||'').toLowerCase().replace(/\d+/g,'#').replace(/\s+/g,' ').replace(/[^\w\s|]/g,'').trim().slice(0,120);
+}
+function pickDifficulty(levelBase){
+  const base=Math.round(levelBase);
+  const delta=[-1,0,0,1][Math.floor(Math.random()*4)];
+  return Math.min(10,Math.max(1,base+delta));
+}
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
-      let raw;
-      if (provider === 'gemini') {
-        const url = def.url.replace('{model}', model).replace('{key}', key);
-        const body = {
-          contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userMsg }] }],
-          generationConfig: {
-            maxOutputTokens: maxTokens,
-            temperature: 1.0,
-            responseMimeType: "application/json"
-          }
-        };
-        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (res.status === 429) throw new Error('RATE_LIMIT: Gemini rate limit reached. Please retry in a few seconds.');
-        const data = await res.json();
-        if (data.error) {
-          const code = data.error.code ? ` [${data.error.code}]` : '';
-          const status = data.error.status ? ` — ${data.error.status}` : '';
-          throw new Error('Gemini API error' + code + status + ': ' + data.error.message);
-        }
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-          const reason = (data.candidates && data.candidates[0] && data.candidates[0].finishReason) || 'unknown';
-          throw new Error('Gemini returned no content (finishReason: ' + reason + '). Try again or pick a different model.');
-        }
-        raw = data.candidates[0].content.parts[0].text;
-      } else {
-        const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key };
-        if (provider === 'openrouter') {
-          headers['HTTP-Referer'] = 'https://daily-practice-hub.local';
-          headers['X-Title'] = 'Daily Practice Hub';
-        }
-        const body = {
-          model, max_tokens: maxTokens, temperature: 1.05,
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }]
-        };
-        body.response_format = { type: 'json_object' };
-        const res = await fetch(def.url, { method: 'POST', headers, body: JSON.stringify(body) });
-        if (res.status === 429) throw new Error('RATE_LIMIT: API rate limit reached. Please retry in a few seconds.');
-        const data = await res.json();
-        if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)));
-        raw = data.choices[0].message.content;
-      }
+// FIX #5: 2:8 ratio — 20% theoretical, 80% applied
+const STYLE_POOL = [
+  'applied problem-solving with real data and step-by-step working required',
+  'applied scenario: diagnose an issue in the given dataset/situation and fix it',
+  'applied case study from Indian industry — compute the answer numerically',
+  'applied exam-style with a deliberate numeric twist or trap',
+  'applied debug-the-mistake: find and correct the error in given working/code/query',
+  'applied real-world business decision — compute and justify',
+  'applied multi-step calculation with intermediate values shown',
+  'applied comparison: evaluate two approaches with numbers',
+  'THEORETICAL — define, explain, and give one concrete example',  // ~1 in 8 → ~12%
+  'THEORETICAL — state the concept, its formula, and one worked mini-example',
+];
 
-      return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    }
+const SETTING_WORDS = shuffle([
+  'e-commerce analytics startup', 'Indian railway ticketing system', 'hospital patient records',
+  'EdTech platform in Gujarat', 'FMCG supply chain in Maharashtra', 'ISRO telemetry data pipeline',
+  'stock brokerage platform', 'food delivery analytics', 'textile factory in Surat',
+  'microfinance institution in rural UP', 'solar energy plant monitoring', 'cricket match statistics',
+  'urban real estate portal in Ahmedabad', 'pharmaceutical clinical trials', 'logistics fleet tracking',
+  'government health scheme data', 'mutual fund portfolio analysis', 'fintech lending platform',
+]);
+let settingCursor = 0;
+function nextSetting(){ const s=SETTING_WORDS[settingCursor%SETTING_WORDS.length]; settingCursor++; return s; }
 
-    // ═══════════════════════════════════════════════════
-    //  SYSTEM PROMPTS
-    // ═══════════════════════════════════════════════════
-    function getSysPrompt(moduleId, level) {
-      const lvl = Math.round(level);
-      // FIX #2: Tighter schema with explicit conciseness rules to prevent truncation
-      const schema = `Return ONLY valid minified JSON — no markdown fences, no extra text before or after.
+function buildVarietyInstruction(modId, difficulty){
+  const h   = getModuleHistory(modId);
+  const style = STYLE_POOL[h.styleCursor % STYLE_POOL.length]; h.styleCursor++;
+  const recentTopics = h.topicHistory.slice(-5).join(' | ') || 'none';
+  const recentSigs   = h.signatureHistory.slice(-5).join(' | ') || 'none';
+  const setting = nextSetting();
+  const nums = [Math.floor(Math.random()*900+100), Math.floor(Math.random()*9000+1000), (Math.random()*40+5).toFixed(1)].join(', ');
+  return `Effective difficulty: ${difficulty}/10.
+VARIETY MANDATE (follow strictly):
+- Question style: ${style}
+- Domain/setting: ${setting}
+- Use at least one of these seed numbers: ${nums}
+- BANNED recent topics: ${recentTopics}
+- BANNED recent patterns: ${recentSigs}
+- Change ALL of: names, numbers, units, context, framing vs prior problems.
+- MCQ modules: options on SEPARATE lines prefixed A) B) C) D) — all distractors must be plausible.`;
+}
+
+// ═══════════════════════════════════════════════════
+//  TOPIC POOLS — FIX #6: comprehensive & expanded
+// ═══════════════════════════════════════════════════
+
+// Module 0: Brain Teasers (FIX #4: no exercise)
+const BRAIN_TYPES = [
+  'chess-puzzle: describe a concrete board position (e.g., White Kg1 Qd1 Re1 Bb2 Nf3 | Black Kg8 Qd8 Re8 Bf8 Nf6 pawns e4 e5) and ask White/Black to find the best move or mating sequence',
+  'lateral-thinking riddle: a counterintuitive scenario with a clever definitive answer (no sports/workout)',
+  'mathematical-logic puzzle: sequence, number pattern, or combinatorial brain teaser with a numeric answer',
+];
+
+// Module 1: SQL — data analytics focus
+const SQL_TOPICS = [
+  'window functions (ROW_NUMBER, RANK, DENSE_RANK, NTILE)',
+  'LAG/LEAD for time-series comparison',
+  'CTEs for multi-step analytics queries',
+  'GROUP BY with HAVING and conditional aggregation (CASE WHEN inside SUM/COUNT)',
+  'INNER / LEFT / FULL OUTER JOINs on multiple tables',
+  'self-join for hierarchical or sequential data',
+  'subqueries and correlated subqueries',
+  'date/time functions for cohort and retention analysis',
+  'STRING_AGG / GROUP_CONCAT for string aggregation',
+  'PIVOTING data with CASE WHEN',
+  'SUM OVER PARTITION (running totals, moving averages)',
+  'FIRST_VALUE / LAST_VALUE window functions',
+  'percentile and median with PERCENTILE_CONT',
+  'deduplication and gap-and-islands problems',
+  'query optimisation: index usage, explain plan reading',
+];
+
+// Module 2: Excel — data analytics focus
+const EXCEL_TOPICS = [
+  'XLOOKUP for two-way lookups with fallback',
+  'INDEX-MATCH with multiple criteria',
+  'SUMIFS / COUNTIFS / AVERAGEIFS for segmented analysis',
+  'Dynamic array formulas: FILTER, SORT, UNIQUE, SEQUENCE',
+  'LAMBDA and LET for reusable logic',
+  'Pivot Table: calculated fields, % of total, running total',
+  'Power Query: merge queries, unpivot columns, custom column',
+  'TEXTJOIN / TEXTSPLIT for data cleaning',
+  'IFERROR + VLOOKUP for error-resilient lookups',
+  'Statistical functions: STDEV, MEDIAN, QUARTILE, CORREL',
+  'Data Validation + dependent dropdowns',
+  'Conditional formatting with custom formula',
+  'OFFSET + INDIRECT for dynamic named ranges',
+  'Goal Seek / Solver for what-if analysis',
+  'Array formulas for matrix operations',
+];
+
+// Module 3: Power BI / Tableau — analytics focus
+const BI_TOPICS = [
+  'DAX: CALCULATE with multiple FILTER conditions',
+  'DAX: time intelligence — DATEADD, SAMEPERIODLASTYEAR, DATESYTD',
+  'DAX: RANKX for dynamic ranking',
+  'DAX: DIVIDE for safe division KPIs',
+  'DAX: RELATED and RELATEDTABLE for cross-table measures',
+  'DAX: iterator functions SUMX, AVERAGEX, MAXX',
+  'DAX: running total with EARLIER',
+  'Power BI: row-level security (RLS) DAX rules',
+  'Tableau: FIXED LOD for segment-level aggregation',
+  'Tableau: INCLUDE / EXCLUDE LODs for ratio metrics',
+  'Tableau: table calculations — WINDOW_SUM, INDEX, RANK',
+  'Tableau: parameter actions for dynamic drill-downs',
+  'Tableau: blending vs joining data sources',
+  'KPI dashboard design: traffic light indicators',
+  'Cohort retention matrix visualisation',
+];
+
+// Module 4: Python — data analytics focus
+const PYTHON_TOPICS = [
+  'Pandas: groupby + agg with multiple functions',
+  'Pandas: merge/join DataFrames (inner, left, outer)',
+  'Pandas: pivot_table vs crosstab',
+  'Pandas: apply / map / applymap for row/column transforms',
+  'Pandas: handling missing data — fillna, interpolate, dropna strategy',
+  'Pandas: datetime indexing, resample, rolling window',
+  'Pandas: string operations with .str accessor',
+  'Pandas: multi-level indexing, stack/unstack',
+  'NumPy: broadcasting, vectorised operations, matrix math',
+  'NumPy: statistical functions — mean, std, percentile, corrcoef',
+  'EDA: detecting outliers with IQR / Z-score method',
+  'EDA: correlation matrix and heatmap interpretation',
+  'Matplotlib/Seaborn: plot the right chart for the data type',
+  'Scikit-learn: train/test split, cross-validation, confusion matrix',
+  'Scikit-learn: Linear/Logistic Regression interpretation',
+  'Data cleaning: regex extraction, dtype conversion, duplicate removal',
+  'List comprehension and dict comprehension for data wrangling',
+  'File I/O: reading CSV/JSON/Excel, writing clean output',
+  'Lambda, map, filter, zip for functional data processing',
+  'Exception handling and defensive coding for ETL pipelines',
+];
+
+// Module 5: Quant Aptitude
+const QUANT_TOPICS = [
+  'profit and loss with successive discounts',
+  'simple and compound interest with half-yearly/quarterly compounding',
+  'time-speed-distance — trains, boats & streams',
+  'time and work including pipes & cisterns',
+  'mixture and alligation — two and three-component',
+  'number systems: HCF, LCM, divisibility rules',
+  'averages — weighted average, change in average',
+  'ratio and proportion — partnership and variation',
+  'percentages — successive change, population growth',
+  'mensuration — areas, volumes, surface area (2D & 3D)',
+  'trigonometry — heights & distances',
+  'statistics — mean, median, mode, standard deviation',
+  'probability — classical and conditional',
+  'permutation and combination',
+  'basic algebra — linear and quadratic equations',
+];
+
+// Module 6: LR & DI
+const LRDI_TYPES = ['LR','DI'];
+const LR_SUBTYPES = [
+  'syllogism (Venn diagram method)',
+  'blood relations with coded clues',
+  'linear seating arrangement (single or double row)',
+  'circular seating arrangement',
+  'floor/building puzzle',
+  'scheduling puzzle (days/months)',
+  'coding-decoding (letter shift, symbol substitution)',
+  'letter/number series (find next term)',
+  'direction sense and distance',
+  'clock and calendar problems',
+  'ranking and comparison',
+  'input-output machine',
+  'logical Venn diagrams',
+  'analogies (word pair and number pair)',
+];
+
+// Module 7: General Science
+const SCIENCE_TOPICS = [
+  'Physics — kinematics (SUVAT equations, projectile)',
+  'Physics — Newton\'s laws, friction, circular motion',
+  'Physics — work, energy, power, conservation laws',
+  'Physics — current electricity (Ohm\'s law, Kirchhoff\'s laws)',
+  'Physics — magnetism and electromagnetic induction',
+  'Physics — optics (mirrors, lenses, refraction)',
+  'Physics — thermodynamics (specific heat, latent heat)',
+  'Physics — modern physics (photoelectric effect, nuclear)',
+  'Chemistry — mole concept and stoichiometry',
+  'Chemistry — redox reactions and electrochemistry',
+  'Chemistry — gas laws (Boyle, Charles, Avogadro)',
+  'Chemistry — solutions and colligative properties',
+  'Chemistry — chemical kinetics and equilibrium',
+  'Chemistry — organic reactions (addition, substitution, elimination)',
+  'Biology — Mendelian genetics and Punnett square',
+  'Biology — human physiology (cardiovascular, respiratory)',
+  'Biology — ecology and food chains / energy flow',
+  'Biology — cell biology and biomolecules',
+];
+
+// Module 8: Current Affairs & GK
+const GK_TOPICS = [
+  'Indian Constitution — articles, schedules, amendments, landmark cases',
+  'Indian Polity — Parliament, President, Judiciary, CAG, Elections',
+  'Indian Economy — Union Budget highlights, GST, RBI policy, NITI Aayog',
+  'Government Schemes — PMJDY, PM-KISAN, Ayushman Bharat, Smart Cities',
+  'Current Affairs India — international relations & agreements (last 8 months)',
+  'Current Affairs India — appointments, awards, obituaries',
+  'Current Affairs India — sports (Olympics, cricket, Asian Games)',
+  'Science & Technology — ISRO missions, DRDO, nuclear program, space economy',
+  'Geography of India — rivers, dams, national parks, biosphere reserves, climate',
+  'Gujarat history & culture — Ancient/Medieval/Modern, dance, festivals, heritage, industry',
+  'Rajasthan history & culture — Ancient/Medieval/Modern, arts, forts, lakes',
+  'Ancient India — IVC, Mauryan, Gupta empires, trade routes',
+  'Medieval India — Delhi Sultanate, Mughal empire, Bhakti/Sufi movement',
+  'Modern India — 1857 revolt, freedom movement, partition, post-independence',
+  'Art & Culture India — classical dance, music, UNESCO sites, literature',
+  'Defense & Security — military exercises, treaties, border disputes',
+  'Environment — climate agreements, biodiversity, pollution indices',
+  'International Organisations — UN bodies, WTO, IMF, G20 outcomes',
+];
+
+// Module 9: GATE CS
+const GATE_TOPICS = [
+  'COA — cache memory: hit/miss ratio, AMAT calculation',
+  'COA — pipeline: stages, hazards, speedup calculation',
+  'COA — addressing modes and instruction encoding',
+  'COA — memory hierarchy and virtual memory',
+  'OS — CPU scheduling algorithms: FCFS, SJF, Round Robin Gantt chart',
+  'OS — page replacement algorithms: FIFO, LRU, Optimal',
+  'OS — deadlock: detection, prevention, banker\'s algorithm',
+  'OS — semaphores and producer-consumer synchronisation',
+  'OS — disk scheduling: SSTF, SCAN, C-SCAN',
+  'CN — subnetting and VLSM calculation',
+  'CN — TCP flow and congestion control',
+  'CN — OSI/TCP-IP layers and protocol mapping',
+  'CN — Dijkstra and Bellman-Ford shortest path',
+  'CN — CSMA/CD, token ring, Ethernet frame format',
+  'DSA — Big-O/Theta/Omega analysis',
+  'DSA — sorting algorithm trace: QuickSort, MergeSort, HeapSort',
+  'DSA — BST operations: insert, delete, inorder traversal trace',
+  'DSA — graph algorithms: BFS/DFS trace, spanning tree',
+  'DSA — dynamic programming: LCS, knapsack, matrix chain',
+  'DSA — hashing: collision resolution, load factor',
+];
+
+// Topic instruction builders
+function getBrainInstruction(){
+  const h = getModuleHistory(0);
+  const type = BRAIN_TYPES[h.brainCursor % BRAIN_TYPES.length]; h.brainCursor++;
+  return `MANDATORY puzzle type for THIS question: ${type}.`;
+}
+function getQuantTopicInstruction(){
+  const h = getModuleHistory(5);
+  const t = QUANT_TOPICS[h.quantCursor % QUANT_TOPICS.length]; h.quantCursor++;
+  return `MANDATORY quant topic: "${t}". Do NOT drift.`;
+}
+function getGateTopicInstruction(){
+  const h = getModuleHistory(9);
+  const t = GATE_TOPICS[h.gateTopicCursor % GATE_TOPICS.length]; h.gateTopicCursor++;
+  return `MANDATORY GATE topic: ${t}.`;
+}
+function getScienceTopicInstruction(){
+  const h = getModuleHistory(7);
+  const t = SCIENCE_TOPICS[h.scienceCursor % SCIENCE_TOPICS.length]; h.scienceCursor++;
+  return `MANDATORY science topic: ${t}.`;
+}
+function getGKTopicInstruction(){
+  const h = getModuleHistory(8);
+  const t = GK_TOPICS[h.gkCursor % GK_TOPICS.length]; h.gkCursor++;
+  return `MANDATORY GK topic: ${t}.`;
+}
+function getLRDITypeInstruction(){
+  const h = getModuleHistory(6);
+  const type = LRDI_TYPES[h.lrdiCursor % 2]; h.lrdiCursor++;
+  if(type==='LR'){
+    const sub = LR_SUBTYPES[Math.floor(Math.random()*LR_SUBTYPES.length)];
+    return `Generate an LR question. MANDATORY sub-type: ${sub}.`;
+  }
+  return 'Generate a DI question. Provide a compact data table (5–7 rows, plain text with | separators) then ask exactly 2 sub-questions each with 4 options A) B) C) D).';
+}
+
+// ═══════════════════════════════════════════════════
+//  SYSTEM PROMPTS — FIX #2 domain focus, FIX #5 2:8 ratio
+// ═══════════════════════════════════════════════════
+function getSysPrompt(moduleId, level){
+  const lvl = Math.round(level);
+  const schema = `Return ONLY valid minified JSON — no markdown fences, no extra text.
 CRITICAL JSON RULES:
-1. Escape ALL newlines inside string values as \\n (two characters: backslash + n).
+1. Escape ALL newlines inside strings as \\n (backslash + n).
 2. Escape ALL double-quotes inside strings as \\".
-3. For math: write equations in plain text (e.g., "Delta = b^2 - 4ac") — NO LaTeX backslashes.
-4. CONCISENESS IS MANDATORY to avoid response cutoff:
-   - problem: max 120 words
-   - explanation: max 100 words
-   - hint: max 30 words
-   - answer: max 60 words
-Schema (output exactly this structure):
-{"topic":"...","problem":"...","hint":"...","answer":"...","explanation":"..."}
+3. Math equations in plain text only (e.g., "v = u + at") — NO LaTeX backslashes.
+4. CONCISENESS to avoid cutoff: problem ≤130 words, explanation ≤110 words, hint ≤35 words, answer ≤70 words.
+5. MCQ modules MUST include options on separate \\n-separated lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+Schema: {"topic":"...","problem":"...","hint":"...","answer":"...","explanation":"..."}
 Difficulty: ${lvl}/10.`;
 
-      const P = [
-        // 0 Exercise & Mental
-        `You generate practical daily Exercise & Mental challenges at difficulty ${lvl}/10. Randomly pick ONE type:
-(a) Physical workout: 3-5 named exercises with exact sets/reps/duration scaled to level.
-(b) Chess puzzle: describe board position (e.g., "White: Kg1 Qe2 Re1 | Black: Kg8 Rd8 pf7") and ask for the best move.
-(c) Brain riddle: lateral-thinking or logic riddle with a definitive clever answer.
-Make it engaging and actionable. ${schema}`,
+  const ratio = 'IMPORTANT: ~80% of problems must be applied/practical/computational. Only ~20% should be theoretical (concept + example). The current question style is given in the VARIETY MANDATE.';
 
-        // 1 SQL
-        `You generate SQL practice problems at difficulty ${lvl}/10 for interview prep.
-ALWAYS include CREATE TABLE + INSERT statements (4-5 rows), then ask a specific business question. Answer must be a complete working SQL query.
-Scale: SELECT/WHERE → JOINs → GROUP BY/HAVING → subqueries → window functions/CTEs.
+  const P = [
+    // 0 Brain Teasers — FIX #4
+    `You generate Brain Teaser problems. NO physical exercises, NO workout routines — only mental challenges.
+Types allowed: chess puzzles with concrete board positions, lateral-thinking riddles, mathematical/logical puzzles.
+${ratio}
 ${schema}`,
 
-        // 2 Excel
-        `You generate Excel formula problems at difficulty ${lvl}/10.
-ALWAYS include a small data table (4-5 rows, | separators), then ask what formula to write OR what a formula evaluates to. Include the concrete numerical/text answer.
-Scale: SUM/AVERAGE → VLOOKUP/IF → INDEX-MATCH/SUMIF → array/XLOOKUP.
+    // 1 SQL — DATA ANALYTICS focus — FIX #2
+    `You generate SQL problems for DATA ANALYTICS learners at difficulty ${lvl}/10.
+Context: analyst querying business databases (sales, marketing, customer, product, finance data).
+ALWAYS include: CREATE TABLE with realistic columns + INSERT with 5–6 rows of sample data, then a clear business analytics question.
+Answer = complete working SQL query with brief inline comments.
+Scale: basic SELECT/WHERE/GROUP BY → JOINs + HAVING → subqueries/CTEs → window functions (ROW_NUMBER, LAG, RANK, running totals).
+Focus on analytics patterns: cohort analysis, funnel metrics, YoY comparison, top-N per group, running totals.
+${ratio}
 ${schema}`,
 
-        // 3 Power BI / Tableau
-        `You generate Power BI or Tableau problems at difficulty ${lvl}/10.
-Give a business scenario, then ask for a specific DAX measure (Power BI) OR Tableau calculated field/LOD. Answer must be the complete formula.
-Scale: basic SUM/AVG → CALCULATE/FILTER → time intelligence → complex LODs. Alternate tools each time.
+    // 2 Excel — DATA ANALYTICS focus — FIX #2
+    `You generate Excel problems for DATA ANALYTICS learners at difficulty ${lvl}/10.
+Context: analyst working with business data in Excel (KPIs, reports, dashboards, data cleaning).
+ALWAYS include: a small realistic data table (4–6 rows, | separators showing column names), then a specific analytics task.
+Answer = the exact formula or Power Query M-code step with concrete result.
+Scale: SUM/AVERAGE/COUNT/IF → VLOOKUP/SUMIFS/COUNTIFS → INDEX-MATCH/XLOOKUP → dynamic arrays (FILTER, SORT, UNIQUE) → LAMBDA/LET → Pivot Table formulas → Power Query transformations.
+${ratio}
 ${schema}`,
 
-        // 4 Python
-        `You generate Python coding problems at difficulty ${lvl}/10.
-Include a clear problem statement and 2-3 input → output examples. Answer must be complete Python 3 code.
-Scale: basic I/O/loops → lists/dicts → algorithms (sorting, recursion) → data structures/OOP.
+    // 3 Power BI / Tableau — ANALYTICS focus — FIX #2
+    `You generate Power BI or Tableau problems for DATA ANALYTICS learners at difficulty ${lvl}/10.
+Context: BI analyst building dashboards, KPIs, and analytical reports.
+Provide: a business scenario with table structure and 3–4 sample values, then ask for a specific measure/calculated field.
+Answer = the complete DAX measure or Tableau calculated field / LOD expression.
+Scale: basic SUM/AVERAGE → CALCULATE/FILTER/ALL → time intelligence (DATEADD, SAMEPERIODLASTYEAR, DATESYTD) → RANKX/TOPN → complex LODs (FIXED/INCLUDE/EXCLUDE) → RLS / table calcs.
+Alternate between Power BI DAX and Tableau each time.
+${ratio}
 ${schema}`,
 
-        // 5 Quant Aptitude
-        `You generate Quantitative Aptitude MCQ word problems at difficulty ${lvl}/10, Indian competitive exam style (CAT/SSC/UPSC/IBPS).
-Word problem with specific numbers. Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
-Answer must include the correct letter AND numeric value. ${schema}`,
-
-        // 6 LR & Data Interpretation
-        `You generate LR or DI MCQ problems at difficulty ${lvl}/10, Indian competitive exam style.
-Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+    // 4 Python — DATA ANALYTICS focus — FIX #2
+    `You generate Python DATA ANALYTICS problems at difficulty ${lvl}/10.
+STRICTLY DATA ANALYTICS context: Pandas, NumPy, Matplotlib/Seaborn, Scikit-learn basics, EDA, data cleaning.
+NO pure algorithmic/competitive programming (no Fibonacci, no sorting from scratch, no pure math).
+Include: a concrete scenario with a small sample DataFrame shown as a dict/list, a specific analytics question, and 2 expected output examples.
+Answer = complete working Python 3 code using data analytics libraries.
+Scale: Pandas basics (read, filter, groupby) → joins/merges/reshape → datetime/string operations/regex → EDA (outlier detection, correlation) → visualisation → basic ML (train/test, metrics).
+${ratio}
 ${schema}`,
 
-        // 7 General Science
-        `You generate General Science applied/numerical problems at difficulty ${lvl}/10 (10th to JEE/NEET level).
-Must be computational or application-based — not a pure definition.
-Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+    // 5 Quant Aptitude — MCQ, FIX #3
+    `You generate Quantitative Aptitude MCQ word problems at difficulty ${lvl}/10, Indian competitive exam style (CAT/SSC CGL/UPSC/IBPS Banking).
+Word problem with specific numbers and realistic context.
+MANDATORY: Include four options on separate lines in the problem field:
+A) option1\\nB) option2\\nC) option3\\nD) option4
+Answer = correct letter + numeric value + brief working.
+${ratio}
 ${schema}`,
 
-        // 8 Current Affairs & GK
-        `You generate Current Affairs and GK MCQ questions at difficulty ${lvl}/10, UPSC/GPSC/RPSC level.
-Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
-Explanation must clarify why each wrong option is incorrect (1 line each). ${schema}`,
-
-        // 9 GATE CS
-        `You generate GATE Computer Science MCQ problems at difficulty ${lvl}/10.
-MUST involve actual computation, numerical trace, or algorithm analysis — not a definition.
-Provide four options on SEPARATE lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+    // 6 LR & DI — MCQ, FIX #3
+    `You generate Logical Reasoning OR Data Interpretation MCQ problems at difficulty ${lvl}/10, Indian competitive exam style.
+MANDATORY: Include four options on separate lines in the problem field:
+A) option1\\nB) option2\\nC) option3\\nD) option4
+For DI: also include a data table before the question.
+Answer = correct letter + brief reasoning.
+${ratio}
 ${schema}`,
-      ];
-      return P[moduleId];
+
+    // 7 General Science — MCQ, FIX #3
+    `You generate General Science applied/numerical MCQ problems at difficulty ${lvl}/10 (10th standard to JEE/NEET level).
+Must be computational or application-based — NOT a pure definition question.
+MANDATORY: Include four options on separate lines in the problem field:
+A) option1\\nB) option2\\nC) option3\\nD) option4
+Answer = correct letter + full worked solution.
+${ratio}
+${schema}`,
+
+    // 8 Current Affairs & GK — MCQ, FIX #3
+    `You generate Current Affairs and GK MCQ questions at difficulty ${lvl}/10, UPSC/GPSC/RPSC level.
+MANDATORY: Include four options on separate lines in the problem field:
+A) option1\\nB) option2\\nC) option3\\nD) option4
+Explanation must state the correct fact AND briefly say why each wrong option is incorrect.
+${ratio}
+${schema}`,
+
+    // 9 GATE CS — MCQ, FIX #3
+    `You generate GATE Computer Science MCQ problems at difficulty ${lvl}/10.
+Must involve actual computation, numerical trace, or algorithm analysis — NOT a pure definition.
+MANDATORY: Include four options on separate lines in the problem field:
+A) option1\\nB) option2\\nC) option3\\nD) option4
+Answer = correct letter + full step-by-step trace/calculation.
+${ratio}
+${schema}`,
+  ];
+  return P[moduleId];
+}
+
+// ═══════════════════════════════════════════════════
+//  ROBUST JSON REPAIR
+// ═══════════════════════════════════════════════════
+function repairJSON(raw){
+  if(!raw||typeof raw!=='string') throw new Error('Empty response from model.');
+  let s = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
+  try{ return JSON.parse(s); } catch(_){}
+  const start=s.indexOf('{'), end=s.lastIndexOf('}');
+  if(start!==-1 && end>start){
+    let c = s.slice(start,end+1)
+      .replace(/\\(?!["\\/bfnrtu])/g,'\\\\')
+      .replace(/,\s*([}\]])/g,'$1')
+      .replace(/\u0000/g,'');
+    try{ return JSON.parse(c); } catch(_){}
+    // attempt truncation repair
+    let f=c;
+    const qc=(f.match(/(?<!\\)"/g)||[]).length;
+    if(qc%2!==0) f+='"';
+    const opens=(f.match(/\{/g)||[]).length, closes=(f.match(/\}/g)||[]).length;
+    const bOpen=(f.match(/\[/g)||[]).length, bClose=(f.match(/\]/g)||[]).length;
+    f+=']'.repeat(Math.max(0,bOpen-bClose));
+    f+='}}'.repeat(Math.max(0,opens-closes));
+    f=f.replace(/,\s*([}\]])/g,'$1');
+    try{ return JSON.parse(f); } catch(_){}
+  }
+  throw new Error('Model returned malformed JSON. The response may have been cut off — please retry.');
+}
+
+function safeParseJSON(raw){
+  const parsed=repairJSON(raw);
+  for(const key of ['topic','problem','hint','answer','explanation']){
+    if(parsed[key]&&typeof parsed[key]==='string'){
+      parsed[key]=parsed[key].replace(/\\n/g,'\n');
     }
+  }
+  return parsed;
+}
 
-    // ═══════════════════════════════════════════════════
-    //  FIX #3: Robust MCQ extraction and rendering
-    // ═══════════════════════════════════════════════════
-    function extractMcqOptions(problemText) {
-      if (!problemText) return [];
-      // Normalise: the JSON parse may have given us literal \n or real newlines
-      const text = problemText.replace(/\\n/g, '\n');
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const options = [];
+function isCompleteProblem(obj){
+  return obj&&typeof obj.topic==='string'&&typeof obj.problem==='string'&&
+    typeof obj.hint==='string'&&typeof obj.answer==='string'&&typeof obj.explanation==='string';
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-      for (const line of lines) {
-        // Match: A) / A. / A: / A - text  (case insensitive, any of A B C D)
-        const m = line.match(/^([A-Da-d])\s*[\)\.\:\-]\s*(.+)$/);
-        if (m) {
-          options.push({ label: m[1].toUpperCase(), text: m[2].trim() });
-        }
-      }
+// ═══════════════════════════════════════════════════
+//  API
+// ═══════════════════════════════════════════════════
+const PROVIDER_DEFAULTS = {
+  gemini:     { url:'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}', model:'gemini-2.5-flash' },
+  groq:       { url:'https://api.groq.com/openai/v1/chat/completions', model:'llama-3.3-70b-versatile' },
+  openrouter: { url:'https://openrouter.ai/api/v1/chat/completions', model:'meta-llama/llama-3.1-8b-instruct:free' },
+};
 
-      // Deduplicate by label
-      const seen = new Set();
-      const unique = options.filter(o => { if (seen.has(o.label)) return false; seen.add(o.label); return true; });
-      return unique.length >= 2 ? unique : []; // show box if at least 2 options found
-    }
-
-    function renderMcqOptions(problemText) {
-      const opts = extractMcqOptions(problemText);
-      const box = document.getElementById('mcq-box');
-      const wrap = document.getElementById('mcq-options');
-      wrap.innerHTML = '';
-
-      if (!opts.length) {
-        box.style.display = 'none';
-        return;
-      }
-
-      // Clear any previously selected radio
-      opts.forEach(opt => {
-        const label = document.createElement('label');
-        label.className = 'mcq-option-label';
-        label.style.setProperty('--accent', currentMod ? currentMod.accent : '#378ADD');
-
-        const radio = document.createElement('input');
-        radio.type = 'radio';
-        radio.name = 'mcq-choice';
-        radio.value = opt.label;
-
-        const letter = document.createElement('span');
-        letter.className = 'opt-letter';
-        letter.textContent = opt.label + ')';
-
-        const text = document.createElement('span');
-        text.textContent = opt.text;
-
-        label.appendChild(radio);
-        label.appendChild(letter);
-        label.appendChild(text);
-        wrap.appendChild(label);
-      });
-
-      box.style.display = 'block';
-    }
-
-    function useSelectedOption() {
-      const picked = document.querySelector('input[name="mcq-choice"]:checked');
-      if (!picked) {
-        // Briefly highlight the box to signal "please select one"
-        const box = document.getElementById('mcq-box');
-        box.style.outline = '2px solid #E24B4A';
-        setTimeout(() => { box.style.outline = ''; }, 800);
-        return;
-      }
-      const area = document.getElementById('answer-input');
-      area.value = picked.value;
-      area.focus();
-    }
-
-    function getEvalPrompt() {
-      return `You evaluate student answers for competitive exam and data skill practice. Be encouraging, precise, and fair. Give partial credit for partial understanding.
-Return ONLY valid JSON (no markdown fences, no extra text):
-{"correct":true_or_false,"score":0_to_100,"verdict":"Correct! / Partially Correct / Incorrect","feedback":"2-3 sentences on what they got right or wrong","tip":"one key learning point"}`;
-    }
-
-    // ═══════════════════════════════════════════════════
-    //  SCREEN MANAGEMENT
-    // ═══════════════════════════════════════════════════
-    function showScreen(name) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById('screen-' + name).classList.add('active');
-    }
-
-    // ═══════════════════════════════════════════════════
-    //  SETTINGS
-    // ═══════════════════════════════════════════════════
-    const PROVIDER_INFO = {
-      gemini: `<b>Google Gemini</b> — Free tier: 15 req/min, 1,500 req/day. Default model: <code>gemini-2.0-flash-lite</code> (free & fast).<br>
-Other free models: <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash-001</code>.<br>
-Get your free key → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>`,
-      groq: `<b>Groq</b> — Very fast, generous free tier. Default model: <code>llama-3.3-70b-versatile</code>.<br>
-Get your free key → <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>`,
-      openrouter: `<b>OpenRouter</b> — Aggregates many models. Default: <code>meta-llama/llama-3.1-8b-instruct:free</code>.<br>
-Get your free key → <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a><br>
-Other free models: <code>google/gemini-2.0-flash-exp:free</code>, <code>mistralai/mistral-7b-instruct:free</code>`,
+async function callAI(systemPrompt, userMsg, maxTokens=2400){
+  const provider = localStorage.getItem('dph_provider')||'gemini';
+  const key      = localStorage.getItem('dph_apiKey')||'';
+  const def      = PROVIDER_DEFAULTS[provider];
+  const model    = (localStorage.getItem('dph_model')||'').trim()||def.model;
+  let raw;
+  if(provider==='gemini'){
+    const url=def.url.replace('{model}',model).replace('{key}',key);
+    const body={
+      contents:[{role:'user',parts:[{text:systemPrompt+'\n\n'+userMsg}]}],
+      generationConfig:{maxOutputTokens:maxTokens,temperature:1.0,responseMimeType:'application/json'}
     };
-
-    let selectedProvider = localStorage.getItem('dph_provider') || 'gemini';
-
-    function selectProvider(p, el) {
-      selectedProvider = p;
-      document.querySelectorAll('.provider-opt').forEach(o => o.classList.remove('selected'));
-      el.classList.add('selected');
-      document.getElementById('provider-info').innerHTML = PROVIDER_INFO[p];
-      const defaults = { gemini: 'gemini-2.0-flash-lite', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.1-8b-instruct:free' };
-      const mi = document.getElementById('model-input');
-      if (!mi.value || Object.values(defaults).includes(mi.value)) mi.placeholder = defaults[p];
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.status===429) throw new Error('RATE_LIMIT: Gemini rate limit reached. Please retry in a few seconds.');
+    const data=await res.json();
+    if(data.error){
+      const code=data.error.code?` [${data.error.code}]`:'';
+      throw new Error('Gemini API error'+code+': '+data.error.message);
     }
-
-    function saveSettings() {
-      const key = document.getElementById('api-key-input').value.trim();
-      const model = document.getElementById('model-input').value.trim();
-      const errEl = document.getElementById('settings-error');
-      if (!key) { errEl.style.display = 'block'; errEl.textContent = 'Please enter your API key.'; return; }
-      errEl.style.display = 'none';
-      localStorage.setItem('dph_apiKey', key);
-      localStorage.setItem('dph_provider', selectedProvider);
-      localStorage.setItem('dph_model', model);
-      showScreen('home');
-      renderHome();
+    if(!data.candidates||!data.candidates[0]||!data.candidates[0].content){
+      const reason=(data.candidates&&data.candidates[0]&&data.candidates[0].finishReason)||'unknown';
+      throw new Error('Gemini returned no content (finishReason: '+reason+'). Try again.');
     }
+    raw=data.candidates[0].content.parts[0].text;
+  } else {
+    const headers={'Content-Type':'application/json','Authorization':'Bearer '+key};
+    if(provider==='openrouter'){headers['HTTP-Referer']='https://daily-practice-hub.local';headers['X-Title']='Daily Practice Hub';}
+    const body={model,max_tokens:maxTokens,temperature:1.05,
+      messages:[{role:'system',content:systemPrompt},{role:'user',content:userMsg}],
+      response_format:{type:'json_object'}};
+    const res=await fetch(def.url,{method:'POST',headers,body:JSON.stringify(body)});
+    if(res.status===429) throw new Error('RATE_LIMIT: API rate limit reached. Please retry in a few seconds.');
+    const data=await res.json();
+    if(data.error) throw new Error(typeof data.error==='string'?data.error:(data.error.message||JSON.stringify(data.error)));
+    raw=data.choices[0].message.content;
+  }
+  return raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
+}
 
-    // ═══════════════════════════════════════════════════
-    //  HOME
-    // ═══════════════════════════════════════════════════
-    function renderHome() {
-      S = loadState();
-      document.getElementById('home-date').textContent =
-        new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-      document.getElementById('stat-streak').textContent = S.streak;
-      document.getElementById('stat-solved').textContent = S.attempts.reduce((a, b) => a + b, 0);
-      document.getElementById('stat-mods').textContent = S.attempts.filter(a => a > 0).length + '/10';
+// ═══════════════════════════════════════════════════
+//  MCQ EXTRACTION — FIX #3: robust, handles embedded options
+// ═══════════════════════════════════════════════════
+function extractMcqOptions(problemText){
+  if(!problemText) return [];
+  const text = problemText.replace(/\\n/g,'\n');
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const options=[];
+  for(const line of lines){
+    const m=line.match(/^([A-Da-d])\s*[\)\.\:\-]\s*(.+)$/);
+    if(m) options.push({label:m[1].toUpperCase(),text:m[2].trim()});
+  }
+  const seen=new Set();
+  const unique=options.filter(o=>{if(seen.has(o.label))return false;seen.add(o.label);return true;});
+  return unique.length>=2?unique:[];
+}
 
-      const grid = document.getElementById('module-grid');
-      grid.innerHTML = '';
-      MODULES.forEach(m => {
-        const lvl = Math.round(S.levels[m.id]);
-        const att = S.attempts[m.id];
-        const avg = att ? Math.round(S.scores[m.id] / att) : null;
-        const div = document.createElement('div');
-        div.className = 'mod-card';
-        div.style.setProperty('--mod-accent', m.accent);
-        div.style.setProperty('--mod-accent-light', m.accent + '18');
-        div.innerHTML = `
-      <div class="emoji">${m.emoji}</div>
-      <div class="mod-name">${m.name}</div>
-      <div class="mod-sub">${m.sub}</div>
-      <span class="mod-badge">Lvl ${lvl} · ${getLevelLabel(lvl)}</span>
-      <div class="mod-stats">${att > 0 ? att + ' solved · ' + avg + '% avg' : 'Not started yet'}</div>`;
-        div.onclick = () => startModule(m);
-        grid.appendChild(div);
-      });
-    }
+function renderMcqOptions(problemText){
+  const opts=extractMcqOptions(problemText);
+  const box=document.getElementById('mcq-box');
+  const wrap=document.getElementById('mcq-options');
+  wrap.innerHTML='';
+  if(!opts.length){ box.style.display='none'; return; }
+  opts.forEach(opt=>{
+    const lbl=document.createElement('label');
+    lbl.className='mcq-option-label';
+    lbl.style.setProperty('--accent',currentMod?currentMod.accent:'#378ADD');
+    const radio=document.createElement('input');
+    radio.type='radio'; radio.name='mcq-choice'; radio.value=opt.label;
+    const letter=document.createElement('span');
+    letter.className='opt-letter'; letter.textContent=opt.label+')';
+    const text=document.createElement('span');
+    text.textContent=opt.text;
+    lbl.appendChild(radio); lbl.appendChild(letter); lbl.appendChild(text);
+    wrap.appendChild(lbl);
+  });
+  box.style.display='block';
+}
 
-    // ═══════════════════════════════════════════════════
-    //  PROBLEM GENERATION
-    // ═══════════════════════════════════════════════════
-    function startModule(m) {
-      currentMod = m;
-      document.getElementById('prob-emoji').textContent = m.emoji;
-      document.getElementById('prob-modname').textContent = m.name;
-      document.getElementById('fb-emoji').textContent = m.emoji;
-      document.getElementById('fb-modname').textContent = m.name;
-      document.getElementById('prob-card').style.setProperty('--accent', m.accent);
-      document.getElementById('fb-next-btn').style.setProperty('--accent', m.accent);
-      document.getElementById('fb-next-btn').onclick = () => newProblem();
-      showScreen('problem');
-      generateProblem();
-    }
+function useSelectedOption(){
+  const picked=document.querySelector('input[name="mcq-choice"]:checked');
+  if(!picked){
+    const box=document.getElementById('mcq-box');
+    box.style.outline='2px solid #E24B4A';
+    setTimeout(()=>{box.style.outline='';},800);
+    return;
+  }
+  const area=document.getElementById('answer-input');
+  area.value=picked.value; area.focus();
+}
 
-    // FIX #4: Reset hint immediately at start of generateProblem (before async, so switching modules always clears it)
-    function resetProblemUI() {
-      document.getElementById('hint-box').style.display = 'none';
-      document.getElementById('hint-box').textContent = '';
-      document.getElementById('hint-toggle-btn').textContent = 'Show hint 💡';
-      document.getElementById('mcq-box').style.display = 'none';
-      document.getElementById('mcq-options').innerHTML = '';
-      document.getElementById('answer-input').value = '';
-      document.getElementById('answer-error').style.display = 'none';
-      document.getElementById('answer-section').style.display = 'block';
-      document.getElementById('answer-reveal').classList.remove('visible');
-      document.getElementById('submit-btn').disabled = false;
-      document.getElementById('submit-btn').textContent = 'Submit answer';
-      if (currentMod) document.getElementById('submit-btn').style.setProperty('--accent', currentMod.accent);
-    }
+function getEvalPrompt(){
+  return `You evaluate student answers for competitive exam and data skill practice. Be encouraging, precise, and fair. Give partial credit for partial understanding.
+Return ONLY valid JSON (no markdown fences):
+{"correct":true_or_false,"score":0_to_100,"verdict":"Correct! / Partially Correct / Incorrect","feedback":"2-3 sentences on what they got right or wrong","tip":"one key learning point"}`;
+}
 
-    async function generateProblem() {
-      // FIX #4: Reset UI immediately — before the async call — so hint/MCQ state always clears on new problem
-      resetProblemUI();
+// ═══════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+}
 
-      document.getElementById('prob-loading').style.display = 'block';
-      document.getElementById('prob-content').style.display = 'none';
-      document.getElementById('prob-error').style.display = 'none';
-      document.getElementById('prob-error').textContent = '';
+// ═══════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════
+const PROVIDER_INFO={
+  gemini:`<b>Google Gemini</b> — Free tier: 15 req/min, 1,500 req/day. Default: <code>gemini-2.0-flash-lite</code>.<br>Other free models: <code>gemini-2.0-flash</code>, <code>gemini-1.5-flash-001</code>.<br>Get key → <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>`,
+  groq:`<b>Groq</b> — Fast, generous free tier. Default: <code>llama-3.3-70b-versatile</code>.<br>Get key → <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>`,
+  openrouter:`<b>OpenRouter</b> — Many free models. Default: <code>meta-llama/llama-3.1-8b-instruct:free</code>.<br>Get key → <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a><br>Other free: <code>google/gemini-2.0-flash-exp:free</code>`,
+};
+let selectedProvider=localStorage.getItem('dph_provider')||'gemini';
 
-      const lvl = S.levels[currentMod.id];
-      const effectiveDifficulty = pickDifficulty(lvl);
-      const badge = `Lvl ${Math.round(lvl)} · ${getLevelLabel(lvl)} (Q ${effectiveDifficulty}/10)`;
-      document.getElementById('prob-levelbadge').textContent = badge;
+function selectProvider(p,el){
+  selectedProvider=p;
+  document.querySelectorAll('.provider-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('provider-info').innerHTML=PROVIDER_INFO[p];
+  const defaults={gemini:'gemini-2.0-flash-lite',groq:'llama-3.3-70b-versatile',openrouter:'meta-llama/llama-3.1-8b-instruct:free'};
+  const mi=document.getElementById('model-input');
+  if(!mi.value||Object.values(defaults).includes(mi.value)) mi.placeholder=defaults[p];
+}
 
-      try {
-        let parsed = null;
-        let lastErr = null;
+function saveSettings(){
+  const key=document.getElementById('api-key-input').value.trim();
+  const model=document.getElementById('model-input').value.trim();
+  const errEl=document.getElementById('settings-error');
+  if(!key){errEl.style.display='block';errEl.textContent='Please enter your API key.';return;}
+  errEl.style.display='none';
+  localStorage.setItem('dph_apiKey',key);
+  localStorage.setItem('dph_provider',selectedProvider);
+  localStorage.setItem('dph_model',model);
+  showScreen('home'); renderHome();
+}
 
-        // FIX #1: Build per-module extra topic instruction outside loop so cursor only advances once
-        let extraInstruction = '';
-        if (currentMod.id === 5) extraInstruction = `\n${getQuantTopicInstruction()}`;
-        else if (currentMod.id === 9) extraInstruction = `\n${getGateTopicInstruction()}`;
-        else if (currentMod.id === 7) extraInstruction = `\n${getScienceTopicInstruction()}`;
-        else if (currentMod.id === 8) extraInstruction = `\n${getGKTopicInstruction()}`;
-        else if (currentMod.id === 6) extraInstruction = `\n${getLRDITypeInstruction()}`;
+// ═══════════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════════
+function renderHome(){
+  S=loadState();
+  document.getElementById('home-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('stat-streak').textContent=S.streak;
+  document.getElementById('stat-solved').textContent=S.attempts.reduce((a,b)=>a+b,0);
+  document.getElementById('stat-mods').textContent=S.attempts.filter(a=>a>0).length+'/10';
+  const grid=document.getElementById('module-grid');
+  grid.innerHTML='';
+  MODULES.forEach(m=>{
+    const lvl=Math.round(S.levels[m.id]);
+    const att=S.attempts[m.id];
+    const avg=att?Math.round(S.scores[m.id]/att):null;
+    const div=document.createElement('div');
+    div.className='mod-card';
+    div.style.setProperty('--mod-accent',m.accent);
+    div.style.setProperty('--mod-accent-light',m.accent+'18');
+    div.innerHTML=`<div class="emoji">${m.emoji}</div><div class="mod-name">${m.name}</div><div class="mod-sub">${m.sub}</div><span class="mod-badge">Lvl ${lvl} · ${getLevelLabel(lvl)}</span><div class="mod-stats">${att>0?att+' solved · '+avg+'% avg':'Not started yet'}</div>`;
+    div.onclick=()=>startModule(m);
+    grid.appendChild(div);
+  });
+}
 
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            // FIX #1: Use strongSeed() for true entropy on every retry
-            const raw = await callAI(
-              getSysPrompt(currentMod.id, effectiveDifficulty),
-              `${buildVarietyInstruction(currentMod.id, effectiveDifficulty)}
+// ═══════════════════════════════════════════════════
+//  PROBLEM GENERATION
+// ═══════════════════════════════════════════════════
+function startModule(m){
+  currentMod=m;
+  document.getElementById('prob-emoji').textContent=m.emoji;
+  document.getElementById('prob-modname').textContent=m.name;
+  document.getElementById('fb-emoji').textContent=m.emoji;
+  document.getElementById('fb-modname').textContent=m.name;
+  document.getElementById('prob-card').style.setProperty('--accent',m.accent);
+  document.getElementById('fb-next-btn').style.setProperty('--accent',m.accent);
+  showScreen('problem');
+  generateProblem();
+}
+
+function resetProblemUI(){
+  document.getElementById('hint-box').style.display='none';
+  document.getElementById('hint-box').textContent='';
+  document.getElementById('hint-toggle-btn').textContent='Show hint 💡';
+  document.getElementById('mcq-box').style.display='none';
+  document.getElementById('mcq-options').innerHTML='';
+  document.getElementById('answer-input').value='';
+  document.getElementById('answer-error').style.display='none';
+  document.getElementById('answer-section').style.display='block';
+  document.getElementById('answer-reveal').classList.remove('visible');
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('submit-btn').textContent='Submit answer';
+  if(currentMod) document.getElementById('submit-btn').style.setProperty('--accent',currentMod.accent);
+}
+
+async function generateProblem(){
+  resetProblemUI();
+  document.getElementById('prob-loading').style.display='block';
+  document.getElementById('prob-content').style.display='none';
+  document.getElementById('prob-error').style.display='none';
+  document.getElementById('prob-error').textContent='';
+
+  const lvl=S.levels[currentMod.id];
+  const effectiveDifficulty=pickDifficulty(lvl);
+  document.getElementById('prob-levelbadge').textContent=`Lvl ${Math.round(lvl)} · ${getLevelLabel(lvl)} (Q ${effectiveDifficulty}/10)`;
+
+  // Build per-module topic instruction once (outside retry loop)
+  let extraInstruction='';
+  if(currentMod.id===0) extraInstruction=`\n${getBrainInstruction()}`;
+  else if(currentMod.id===5) extraInstruction=`\n${getQuantTopicInstruction()}`;
+  else if(currentMod.id===9) extraInstruction=`\n${getGateTopicInstruction()}`;
+  else if(currentMod.id===7) extraInstruction=`\n${getScienceTopicInstruction()}`;
+  else if(currentMod.id===8) extraInstruction=`\n${getGKTopicInstruction()}`;
+  else if(currentMod.id===6) extraInstruction=`\n${getLRDITypeInstruction()}`;
+
+  try{
+    let parsed=null, lastErr=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{
+        const raw=await callAI(
+          getSysPrompt(currentMod.id, effectiveDifficulty),
+          `${buildVarietyInstruction(currentMod.id, effectiveDifficulty)}
 Generate one fresh, creative, varied problem now.
-Entropy seed (ignore value, ensures uniqueness): ${strongSeed()}${extraInstruction}`
-            );
-            parsed = safeParseJSON(raw);
-            if (!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema — missing required fields.');
-            break;
-          } catch (err) {
-            lastErr = err;
-            const msg = String(err.message || '');
-            if (msg.includes('RATE_LIMIT') && attempt < 3) await sleep(1500 * attempt);
-            else if (attempt < 3) await sleep(400);
-          }
-        }
-        if (!parsed) throw lastErr || new Error('Problem generation failed after retries.');
-        currentProblem = parsed;
-
-        // Update history
-        const h = getModuleHistory(currentMod.id);
-        h.topicHistory.push((currentProblem.topic || '').trim());
-        h.signatureHistory.push(normalizeSignature(currentProblem.problem));
-        h.topicHistory = h.topicHistory.slice(-10);
-        h.signatureHistory = h.signatureHistory.slice(-10);
-
-        // Populate problem UI
-        const isCode = CODE_MODULES.has(currentMod.id);
-        document.getElementById('prob-topic').textContent = currentProblem.topic;
-        const stmt = document.getElementById('prob-statement');
-        stmt.textContent = currentProblem.problem;
-        stmt.className = isCode ? 'code-text' : 'problem-text';
-
-        document.getElementById('hint-box').textContent = currentProblem.hint;
-        document.getElementById('answer-input').style.fontFamily = isCode ? 'var(--mono)' : 'var(--font)';
-
-        // FIX #3: Render MCQ options — always attempt extraction, show box when options found
-        renderMcqOptions(currentProblem.problem);
-
-        document.getElementById('prob-loading').style.display = 'none';
-        document.getElementById('prob-content').style.display = 'block';
-      } catch (e) {
-        document.getElementById('prob-loading').style.display = 'none';
-        const el = document.getElementById('prob-error');
-        el.style.display = 'block';
-        el.innerHTML = `<b>Error generating problem:</b> ${e.message}<br><br>
-      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="generateProblem()">Try again</button>`;
-      }
-    }
-
-    function newProblem() { generateProblem(); }
-
-    function goHome() {
-      showScreen('home');
-      renderHome();
-    }
-
-    // FIX #4: toggleHint only operates on current state — already reset properly by resetProblemUI
-    function toggleHint() {
-      const h = document.getElementById('hint-box');
-      const btn = document.getElementById('hint-toggle-btn');
-      if (h.style.display === 'none') {
-        h.style.display = 'block';
-        btn.textContent = 'Hide hint 💡';
-      } else {
-        h.style.display = 'none';
-        btn.textContent = 'Show hint 💡';
-      }
-    }
-
-    function skipProblem() {
-      if (!currentProblem) return;
-      S.streak = 0;
-      saveState(S);
-      const isCode = CODE_MODULES.has(currentMod.id);
-      const ra = document.getElementById('reveal-answer');
-      ra.textContent = currentProblem.answer;
-      ra.className = isCode ? 'code-text' : 'problem-text';
-      document.getElementById('reveal-explanation').textContent = currentProblem.explanation;
-      document.getElementById('answer-section').style.display = 'none';
-      document.getElementById('answer-reveal').classList.add('visible');
-    }
-
-    function handleKey(e) {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { submitAnswer(); }
-    }
-
-    // ═══════════════════════════════════════════════════
-    //  SUBMISSION & EVALUATION
-    // ═══════════════════════════════════════════════════
-    async function submitAnswer() {
-      const ans = document.getElementById('answer-input').value.trim();
-      if (!ans) return;
-      lastAnswer = ans;
-
-      document.getElementById('submit-btn').disabled = true;
-      document.getElementById('submit-btn').textContent = 'Evaluating…';
-      document.getElementById('answer-error').style.display = 'none';
-
-      showScreen('feedback');
-      document.getElementById('fb-loading').style.display = 'block';
-      document.getElementById('fb-content').style.display = 'none';
-      document.getElementById('fb-error').style.display = 'none';
-
-      try {
-        const raw = await callAI(
-          getEvalPrompt(),
-          `Module: ${currentMod.name}
-Problem: ${currentProblem.problem}
-Correct Answer: ${currentProblem.answer}
-Student Answer: ${ans}`,
-          700
+Entropy seed (ignore): ${strongSeed()}${extraInstruction}`
         );
-        const result = safeParseJSON(raw);
-
-        // update state
-        S.attempts[currentMod.id]++;
-        S.scores[currentMod.id] += result.score;
-        if (result.score >= 70) {
-          S.streak++;
-          if (result.score >= 80)
-            S.levels[currentMod.id] = Math.min(10, +(S.levels[currentMod.id] + 0.3).toFixed(1));
-        } else {
-          S.streak = 0;
-        }
-        saveState(S);
-
-        // render feedback
-        const scoreColor = result.score >= 80 ? '#639922' : result.score >= 55 ? '#BA7517' : '#E24B4A';
-        document.getElementById('fb-score-num').textContent = result.score + '%';
-        document.getElementById('fb-score-num').style.color = scoreColor;
-        document.getElementById('fb-verdict').textContent = result.verdict;
-        document.getElementById('fb-feedback-text').textContent = result.feedback;
-        const tipEl = document.getElementById('fb-tip');
-        if (result.tip) { tipEl.textContent = 'Tip: ' + result.tip; tipEl.style.display = 'inline-block'; }
-        else { tipEl.style.display = 'none'; }
-        document.getElementById('fb-progress-bar').style.width = result.score + '%';
-        document.getElementById('fb-progress-bar').style.background = scoreColor;
-        document.getElementById('fb-score-card').style.borderTop = `2px solid ${scoreColor}`;
-
-        const isCode = CODE_MODULES.has(currentMod.id);
-        const ya = document.getElementById('fb-your-answer');
-        ya.textContent = lastAnswer;
-        ya.className = isCode ? 'code-text' : 'problem-text';
-        const ca = document.getElementById('fb-correct-answer');
-        ca.textContent = currentProblem.answer;
-        ca.className = isCode ? 'code-text' : 'problem-text';
-        const ex = document.getElementById('fb-explanation');
-        ex.textContent = currentProblem.explanation;
-        ex.className = 'problem-text';
-        document.getElementById('fb-answer-card').style.setProperty('--accent', scoreColor);
-        document.getElementById('fb-next-btn').style.setProperty('--accent', currentMod.accent);
-
-        document.getElementById('fb-loading').style.display = 'none';
-        document.getElementById('fb-content').style.display = 'block';
-      } catch (e) {
-        document.getElementById('fb-loading').style.display = 'none';
-        const el = document.getElementById('fb-error');
-        el.style.display = 'block';
-        el.innerHTML = `<b>Evaluation failed:</b> ${e.message}<br><br>
-      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="showScreen('problem')">← Back to problem</button>`;
+        parsed=safeParseJSON(raw);
+        if(!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema — missing required fields.');
+        break;
+      } catch(err){
+        lastErr=err;
+        const msg=String(err.message||'');
+        if(msg.includes('RATE_LIMIT')&&attempt<3) await sleep(1500*attempt);
+        else if(attempt<3) await sleep(500);
       }
     }
+    if(!parsed) throw lastErr||new Error('Problem generation failed after retries.');
+    currentProblem=parsed;
 
-    // ═══════════════════════════════════════════════════
-    //  PROVIDER INFO INIT
-    // ═══════════════════════════════════════════════════
-    function initSettings() {
-      const savedProvider = localStorage.getItem('dph_provider') || 'gemini';
-      selectedProvider = savedProvider;
-      document.querySelectorAll('.provider-opt').forEach(el => {
-        if (el.dataset.provider === savedProvider) el.classList.add('selected');
-        else el.classList.remove('selected');
-      });
-      document.getElementById('provider-info').innerHTML = PROVIDER_INFO[savedProvider];
-      const savedKey = localStorage.getItem('dph_apiKey') || '';
-      const savedModel = localStorage.getItem('dph_model') || '';
-      document.getElementById('api-key-input').value = savedKey;
-      document.getElementById('model-input').value = savedModel;
-    }
+    const h=getModuleHistory(currentMod.id);
+    h.topicHistory.push((currentProblem.topic||'').trim());
+    h.signatureHistory.push(normalizeSignature(currentProblem.problem));
+    h.topicHistory=h.topicHistory.slice(-10);
+    h.signatureHistory=h.signatureHistory.slice(-10);
 
-    // ═══════════════════════════════════════════════════
-    //  BOOT
-    // ═══════════════════════════════════════════════════
-    (function boot() {
-      initSettings();
-      const hasKey = !!localStorage.getItem('dph_apiKey');
-      if (hasKey) { showScreen('home'); renderHome(); }
-      else { showScreen('settings'); }
-    })();
-  </script>
+    const isCode=CODE_MODULES.has(currentMod.id);
+    document.getElementById('prob-topic').textContent=currentProblem.topic;
+    const stmt=document.getElementById('prob-statement');
+    stmt.textContent=currentProblem.problem;
+    stmt.className=isCode?'code-text':'problem-text';
+    document.getElementById('hint-box').textContent=currentProblem.hint;
+    document.getElementById('answer-input').style.fontFamily=isCode?'var(--mono)':'var(--font)';
+    renderMcqOptions(currentProblem.problem);
+
+    document.getElementById('prob-loading').style.display='none';
+    document.getElementById('prob-content').style.display='block';
+  } catch(e){
+    document.getElementById('prob-loading').style.display='none';
+    const el=document.getElementById('prob-error');
+    el.style.display='block';
+    el.innerHTML=`<b>Error generating problem:</b> ${e.message}<br><br><button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="generateProblem()">Try again</button>`;
+  }
+}
+
+// FIX #1: newProblem ALWAYS switches to problem screen first
+function newProblem(){
+  showScreen('problem');
+  generateProblem();
+}
+
+function goHome(){
+  showScreen('home');
+  renderHome();
+}
+
+function toggleHint(){
+  const h=document.getElementById('hint-box');
+  const btn=document.getElementById('hint-toggle-btn');
+  if(h.style.display==='none'){h.style.display='block';btn.textContent='Hide hint 💡';}
+  else{h.style.display='none';btn.textContent='Show hint 💡';}
+}
+
+function skipProblem(){
+  if(!currentProblem) return;
+  S.streak=0; saveState(S);
+  const isCode=CODE_MODULES.has(currentMod.id);
+  const ra=document.getElementById('reveal-answer');
+  ra.textContent=currentProblem.answer;
+  ra.className=isCode?'code-text':'problem-text';
+  document.getElementById('reveal-explanation').textContent=currentProblem.explanation;
+  document.getElementById('answer-section').style.display='none';
+  document.getElementById('answer-reveal').classList.add('visible');
+}
+
+function handleKey(e){ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) submitAnswer(); }
+
+// ═══════════════════════════════════════════════════
+//  SUBMISSION & EVALUATION
+// ═══════════════════════════════════════════════════
+async function submitAnswer(){
+  const ans=document.getElementById('answer-input').value.trim();
+  if(!ans) return;
+  lastAnswer=ans;
+  document.getElementById('submit-btn').disabled=true;
+  document.getElementById('submit-btn').textContent='Evaluating…';
+  document.getElementById('answer-error').style.display='none';
+  showScreen('feedback');
+  document.getElementById('fb-loading').style.display='block';
+  document.getElementById('fb-content').style.display='none';
+  document.getElementById('fb-error').style.display='none';
+  try{
+    const raw=await callAI(
+      getEvalPrompt(),
+      `Module: ${currentMod.name}\nProblem: ${currentProblem.problem}\nCorrect Answer: ${currentProblem.answer}\nStudent Answer: ${ans}`,
+      700
+    );
+    const result=safeParseJSON(raw);
+    S.attempts[currentMod.id]++;
+    S.scores[currentMod.id]+=result.score;
+    if(result.score>=70){
+      S.streak++;
+      if(result.score>=80) S.levels[currentMod.id]=Math.min(10,+(S.levels[currentMod.id]+0.3).toFixed(1));
+    } else { S.streak=0; }
+    saveState(S);
+    const scoreColor=result.score>=80?'#639922':result.score>=55?'#BA7517':'#E24B4A';
+    document.getElementById('fb-score-num').textContent=result.score+'%';
+    document.getElementById('fb-score-num').style.color=scoreColor;
+    document.getElementById('fb-verdict').textContent=result.verdict;
+    document.getElementById('fb-feedback-text').textContent=result.feedback;
+    const tipEl=document.getElementById('fb-tip');
+    if(result.tip){tipEl.textContent='Tip: '+result.tip;tipEl.style.display='inline-block';}
+    else{tipEl.style.display='none';}
+    document.getElementById('fb-progress-bar').style.width=result.score+'%';
+    document.getElementById('fb-progress-bar').style.background=scoreColor;
+    document.getElementById('fb-score-card').style.borderTop=`2px solid ${scoreColor}`;
+    const isCode=CODE_MODULES.has(currentMod.id);
+    const ya=document.getElementById('fb-your-answer');
+    ya.textContent=lastAnswer; ya.className=isCode?'code-text':'problem-text';
+    const ca=document.getElementById('fb-correct-answer');
+    ca.textContent=currentProblem.answer; ca.className=isCode?'code-text':'problem-text';
+    const ex=document.getElementById('fb-explanation');
+    ex.textContent=currentProblem.explanation; ex.className='problem-text';
+    document.getElementById('fb-answer-card').style.setProperty('--accent',scoreColor);
+    document.getElementById('fb-next-btn').style.setProperty('--accent',currentMod.accent);
+    document.getElementById('fb-loading').style.display='none';
+    document.getElementById('fb-content').style.display='block';
+  } catch(e){
+    document.getElementById('fb-loading').style.display='none';
+    const el=document.getElementById('fb-error');
+    el.style.display='block';
+    el.innerHTML=`<b>Evaluation failed:</b> ${e.message}<br><br><button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="showScreen('problem')">← Back to problem</button>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════
+function initSettings(){
+  const p=localStorage.getItem('dph_provider')||'gemini';
+  selectedProvider=p;
+  document.querySelectorAll('.provider-opt').forEach(el=>{
+    if(el.dataset.provider===p) el.classList.add('selected');
+    else el.classList.remove('selected');
+  });
+  document.getElementById('provider-info').innerHTML=PROVIDER_INFO[p];
+  document.getElementById('api-key-input').value=localStorage.getItem('dph_apiKey')||'';
+  document.getElementById('model-input').value=localStorage.getItem('dph_model')||'';
+}
+
+(function boot(){
+  initSettings();
+  if(localStorage.getItem('dph_apiKey')){ showScreen('home'); renderHome(); }
+  else{ showScreen('settings'); }
+})();
+</script>
 </body>
-
 </html>
