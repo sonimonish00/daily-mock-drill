@@ -646,6 +646,7 @@ CRITICAL JSON RULES:
 3. Math equations in plain text only (e.g., "v = u + at") — NO LaTeX backslashes.
 4. CONCISENESS to avoid cutoff: problem ≤130 words, explanation ≤110 words, hint ≤35 words, answer ≤70 words.
 5. MCQ modules MUST include options on separate \\n-separated lines: A) ... \\nB) ... \\nC) ... \\nD) ...
+6. NEVER reveal the answer in the problem. The "problem" field must NOT contain: "Answer:", "Correct answer", "Solution", or the final result/code/query.
 Schema: {"topic":"...","problem":"...","hint":"...","answer":"...","explanation":"..."}
 Difficulty: ${lvl}/10.`;
 
@@ -692,6 +693,7 @@ ${schema}`,
 STRICTLY DATA ANALYTICS context: Pandas, NumPy, Matplotlib/Seaborn, Scikit-learn basics, EDA, data cleaning.
 NO pure algorithmic/competitive programming (no Fibonacci, no sorting from scratch, no pure math).
 Include: a concrete scenario with a small sample DataFrame shown as a dict/list, a specific analytics question, and 2 expected output examples.
+The "problem" MUST only ask the question and provide input data + requirements. Do NOT include any solution code, final computed results, or any "Answer:" text in the problem.
 Answer = complete working Python 3 code using data analytics libraries.
 Scale: Pandas basics (read, filter, groupby) → joins/merges/reshape → datetime/string operations/regex → EDA (outlier detection, correlation) → visualisation → basic ML (train/test, metrics).
 ${ratio}
@@ -726,10 +728,11 @@ ${schema}`,
 
     // 8 Current Affairs & GK — MCQ, FIX #3
     `You generate Current Affairs and GK MCQ questions at difficulty ${lvl}/10, UPSC/GPSC/RPSC level.
+THIS MODULE MUST BE 100% THEORETICAL FACT/CONCEPT RECALL (no applied, no computation, no case studies, no numericals).
+Ask exactly ONE question per problem.
 MANDATORY: Include four options on separate lines in the problem field:
 A) option1\\nB) option2\\nC) option3\\nD) option4
 Explanation must state the correct fact AND briefly say why each wrong option is incorrect.
-${ratio}
 ${schema}`,
 
     // 9 GATE CS — MCQ, FIX #3
@@ -742,6 +745,22 @@ ${ratio}
 ${schema}`,
   ];
   return P[moduleId];
+}
+
+function problemLeaksAnswer(p){
+  if(!p||typeof p.problem!=='string') return true;
+  const prob=p.problem;
+  const ans=(p.answer||'').trim();
+  // Strong leak indicators
+  if(/(^|\n)\s*(answer|correct answer|solution)\s*[:\-]/i.test(prob)) return true;
+  if(/(^|\n)\s*final\s+answer\s*[:\-]/i.test(prob)) return true;
+  if(/```/.test(prob)) return true; // keep solutions/code out of the question field
+  // If the answer is short, avoid directly embedding it in the question
+  if(ans && ans.length<=40){
+    const norm=(s)=>String(s).toLowerCase().replace(/\s+/g,' ').trim();
+    if(norm(prob).includes(norm(ans))) return true;
+  }
+  return false;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1020,6 +1039,7 @@ Entropy seed (ignore): ${strongSeed()}${extraInstruction}`
         );
         parsed=safeParseJSON(raw);
         if(!isCompleteProblem(parsed)) throw new Error('Incomplete JSON schema — missing required fields.');
+        if(problemLeaksAnswer(parsed)) throw new Error('Model leaked the answer inside the problem field. Retrying.');
         break;
       } catch(err){
         lastErr=err;
