@@ -444,9 +444,9 @@ const LR_POOL = [
   { tag:'Coding-Decoding',        inst:'Provide a coding rule (letter shift, reversal, symbol substitution). Give 2 coded words. Ask to decode a 3rd word or encode a given word.' },
   { tag:'Direction Sense',        inst:'A person walks in multiple directions with distances. Find final distance from start and/or direction faced. Draw path in answer.' },
   { tag:'Input-Output Machine',   inst:'Show a word/number arrangement machine with 3–4 steps of rearrangement. Ask what step 4 or 5 looks like, or what the input was given a step.' },
-  { tag:'Data Interpretation — Table', inst:'Provide a data table (6–7 rows, 4–5 columns, | separators) about a real Indian business scenario. Ask exactly 2 sub-questions (each with 4 MCQ options A–D). Questions should require percentage, ratio, or comparison calculations.' },
-  { tag:'Data Interpretation — Bar/Line Graph', inst:'Describe a bar chart or line graph data in a structured table. Indian business/government context. Ask exactly 2 sub-questions each with 4 MCQ options A–D.' },
-  { tag:'Data Interpretation — Pie Chart', inst:'Describe a pie chart as percentages of a total (provide actual total value). Ask 2 sub-questions: one finding actual value, one comparing two segments. MCQ A–D each.' },
+  { tag:'Data Interpretation — Table', inst:'Provide a data table (5–6 rows, 4–5 columns, | separators) about a real Indian business/government scenario. Then ask EXACTLY ONE analytical question based on the data (percentage change, ratio, average, or comparison). MCQ with 4 options A–D. ONE question only.' },
+  { tag:'Data Interpretation — Bar/Line Graph', inst:'Describe bar chart or line graph data in a structured table (5–6 rows). Indian business/government context. Ask EXACTLY ONE analytical question (growth rate, highest/lowest, ratio). MCQ with 4 options A–D. ONE question only.' },
+  { tag:'Data Interpretation — Pie Chart', inst:'Describe a pie chart as percentages of a total (provide the actual total value). Ask EXACTLY ONE question (find actual value of a segment, or compare two segments). MCQ A–D. ONE question only.' },
 ];
 
 // MOD 7: General Science — Physics/Chem numerical, Bio theoretical
@@ -474,15 +474,15 @@ const SCIENCE_POOL = [
 
 // MOD 8: Current Affairs & GK — 50% CA, 50% Static GK — all factual MCQ
 const GK_POOL = [
-  // Current Affairs (50%)
-  { tag:'CA — Appointments & Leaders',       cat:'ca', inst:'MCQ on recent appointment: head of government body, CEO of PSU, UN position, ambassador, or Indian cabinet reshuffle. 4 options A–D. Use information up to your knowledge cutoff.' },
-  { tag:'CA — Awards & Honours',             cat:'ca', inst:'MCQ: Padma awards, Nobel Prize, Bharat Ratna, Sports awards (Arjuna/Khel Ratna/Dronacharya), or international honours given to Indians. 4 options A–D.' },
-  { tag:'CA — Sports Events & Champions',    cat:'ca', inst:'MCQ: recent Olympic, cricket (World Cup/IPL), Asian Games, CWG, or national sports championship result. Winner, venue, or record. 4 options A–D.' },
-  { tag:'CA — Major Summits & Agreements',   cat:'ca', inst:'MCQ: G20, SCO, BRICS, ASEAN, or bilateral summit — host city, theme, or key decision. 4 options A–D.' },
-  { tag:'CA — Government Schemes & Missions',cat:'ca', inst:'MCQ: Indian government scheme — launch date, ministry, beneficiary, or target. Include recent schemes (PM-JANMAN, Viksit Bharat, etc.). 4 options A–D.' },
-  { tag:'CA — Science, Space & Defense',     cat:'ca', inst:'MCQ: ISRO mission (Chandrayaan, Aditya-L1, Gaganyaan), DRDO development, or military exercise/treaty. 4 options A–D.' },
-  { tag:'CA — Economy & Banking',            cat:'ca', inst:'MCQ: RBI monetary policy (repo rate, CRR, SLR), Union Budget headline, GDP figure, or economic indicator. 4 options A–D.' },
-  { tag:'CA — Environment & Climate',        cat:'ca', inst:'MCQ: COP summit outcome, India\'s climate target, endangered species news, or pollution index ranking. 4 options A–D.' },
+  // Current Affairs — MUST be from 2023–2025 events
+  { tag:'CA — Appointments & Leaders',       cat:'ca', inst:'MCQ on a real appointment from 2023–2025: head of government body, CEO of PSU, UN position, RBI governor, SEBI chief, or Indian cabinet minister. 4 options A–D. Prioritise events from last 12 months.' },
+  { tag:'CA — Awards & Honours',             cat:'ca', inst:'MCQ: a real award given in 2023–2025 — Padma (Bharat Ratna/Padma Vibhushan/Bhushan/Shri), Nobel Prize, Bharat Ratna, Khel Ratna, or international honour to an Indian. 4 options A–D.' },
+  { tag:'CA — Sports Events & Champions',    cat:'ca', inst:'MCQ: a real sports result from 2023–2025 — ICC World Cup, T20 WC, IPL, Asian Games 2023, Paris Olympics 2024, or CWG. Winner, venue, or record. 4 options A–D.' },
+  { tag:'CA — Major Summits & Agreements',   cat:'ca', inst:'MCQ: a real summit from 2023–2025 — G20 New Delhi 2023, SCO, BRICS (Johannesburg/Kazan), ASEAN, COP28/29, or a bilateral agreement. Host, theme, or key outcome. 4 options A–D.' },
+  { tag:'CA — Government Schemes & Missions',cat:'ca', inst:'MCQ: an Indian government scheme launched or updated in 2023–2025 — Viksit Bharat 2047, PM-JANMAN, PM Surya Ghar, NaMo Drone Didi, or existing scheme target update. Ministry, beneficiary, or target. 4 options A–D.' },
+  { tag:'CA — Science, Space & Defense',     cat:'ca', inst:'MCQ: a real event from 2023–2025 — Chandrayaan-3 (Aug 2023), Aditya-L1, Gaganyaan test, DRDO hypersonic missile, or a military exercise (Tasman Saber, Shakti, etc.). 4 options A–D.' },
+  { tag:'CA — Economy & Banking',            cat:'ca', inst:'MCQ: an RBI monetary policy decision, Union Budget 2024-25 headline, or recent economic indicator from 2023–2025 (GDP, CPI, repo rate change). 4 options A–D.' },
+  { tag:'CA — Environment & Climate',        cat:'ca', inst:'MCQ: COP28 (Dubai 2023) or COP29 outcome, India renewable energy milestone, Wildlife Protection Act update, or an endangered species declaration — all from 2023–2025. 4 options A–D.' },
   // Static GK — History (10%)
   { tag:'GK — Ancient India (IVC, Maurya, Gupta)', cat:'gk', inst:'MCQ on IVC features, Mauryan administration, Gupta achievements, trade routes, or ancient religious texts. 4 options A–D.' },
   { tag:'GK — Medieval India (Mughal, Delhi Sultanate)', cat:'gk', inst:'MCQ on Mughal rulers, Delhi Sultanate, Bhakti/Sufi movement, architecture, or medieval administration. 4 options A–D.' },
@@ -635,38 +635,49 @@ At difficulty 1–5: SSC/Railway level — straightforward calculation.
 At difficulty 6–10: CAT/UPSC-level — multi-step traps, shortcut mastery required.
 The specific topic and method for THIS question is given in the user message — follow it exactly.
 Generate a word problem with specific numbers and a real-world Indian context.
-MANDATORY MCQ: include exactly four options on separate lines inside the problem field: A) val\\nB) val\\nC) val\\nD) val
-Answer = correct option letter + numeric value + concise step-by-step working (show the shortcut, not just the long method).
+MANDATORY MCQ RULES — FOLLOW EXACTLY:
+- Generate EXACTLY ONE question (not two, not three — ONE).
+- Include exactly four options inside the problem field on separate lines: A) val\nB) val\nC) val\nD) val
+- The answer field must state the correct option letter + numeric value + concise step-by-step working (shortcut method preferred).
+- NEVER generate two separate questions each with their own A/B/C/D options.
 ${JSON_SCHEMA}`,
 
 // 6 — LR & DI
 `You are an LR & DI tutor for Indian competitive exams: SSC, Railway, GPSC, RPSC, UPSC (difficulty ${d}/10).
 The specific type for THIS question is in the user message — follow it exactly.
-For syllogism and statement-conclusion questions: be especially rigorous — "possible" conclusions are WRONG; only "definite" conclusions are correct.
-For seating/floor puzzles: ensure a unique solution exists. Provide 2 follow-up questions per puzzle.
-For DI: provide a realistic Indian data table with 6–7 rows.
-MANDATORY MCQ: options inside the problem field on separate \\n-separated lines: A) ...\\nB) ...\\nC) ...\\nD) ...
-Answer = correct option(s) + step-by-step reasoning (Venn diagram description for syllogism, table/deduction trace for puzzles).
+For syllogism and statement-conclusion questions: be rigorous — only DEFINITE conclusions are correct; "possible" ones are not.
+For seating/floor puzzles: ensure a unique solution exists.
+For DI: provide a realistic Indian data table (5–6 rows, | separators), then ask EXACTLY ONE analytical question based on the data.
+MANDATORY MCQ RULES — FOLLOW EXACTLY:
+- Generate EXACTLY ONE question with EXACTLY four options: A) ... B) ... C) ... D) (on separate lines in the problem field).
+- Do NOT ask two separate questions. ONE question, four options, one correct answer only.
+- Answer = correct option letter + step-by-step reasoning.
 ${JSON_SCHEMA}`,
 
 // 7 — General Science
 `You are a General Science tutor for Indian competitive exams: SSC, Railway NTPC/Group-D, GPSC, RPSC (difficulty ${d}/10).
 Physics & Chemistry: 90% numerical/applied, 10% theoretical. Use the specific topic from the user message.
-Biology: 100% factual/theoretical MCQ. Vitamins, blood, body systems, classification, genetics, cell biology.
-MANDATORY MCQ: include 4 options inside the problem field: A) val\\nB) val\\nC) val\\nD) val
+Biology: 100% factual/theoretical MCQ. Topics: vitamins, blood, body systems, classification, genetics, cell biology.
+MANDATORY MCQ RULES — FOLLOW EXACTLY:
+- Generate EXACTLY ONE question (not two, not a set).
+- Include exactly four options inside the problem field: A) val\nB) val\nC) val\nD) val
+- Do NOT generate multiple questions each with their own A/B/C/D.
 Physics answer: show formula → substitution → result with units.
 Chemistry answer: balanced equation if needed + calculation.
-Biology answer: state the correct fact and briefly explain why each wrong option is incorrect.
+Biology answer: correct fact + brief reason why each wrong option is incorrect.
 ${JSON_SCHEMA}`,
 
 // 8 — Current Affairs & GK
 `You are a Current Affairs and General Knowledge MCQ tutor for Indian exams: UPSC, GPSC, RPSC, SSC, Railway (difficulty ${d}/10).
-THIS MODULE IS 100% FACTUAL — no numericals, no applied problems.
-50% of questions are Current Affairs (recent events up to your knowledge cutoff), 50% are Static GK (history, polity, geography, economy, art & culture, computer basics).
+THIS MODULE IS 100% FACTUAL — no numericals, no applied problems, no calculations.
 The specific topic for THIS question is in the user message — follow it exactly.
-Generate exactly ONE MCQ with four options inside the problem field: A) val\\nB) val\\nC) val\\nD) val
-Answer = correct option letter + the fact.
-Explanation = state why the correct answer is right AND briefly say why each of the other three options is wrong.
+CA RECENCY RULE: Current Affairs questions MUST be based on events from 2023–2025 (last 2 years). Do NOT ask about events before 2023 for CA topics. The most recent events you know about are preferred.
+Static GK questions should cover facts that are frequently tested in GPSC, RPSC, RSMSSB, GSSSB, SSC, Railway exams, with occasional surprising/nuanced facts to avoid predictability.
+MANDATORY MCQ RULES — FOLLOW EXACTLY:
+- Generate EXACTLY ONE question (not two, not a set).
+- Include exactly four options inside the problem field: A) val\nB) val\nC) val\nD) val
+- Answer = correct option letter + the key fact.
+- Explanation = why correct option is right + why each of the other three options is wrong.
 ${JSON_SCHEMA}`,
 
 // 9 — GATE CS
@@ -674,8 +685,11 @@ ${JSON_SCHEMA}`,
 Generate a NUMERICAL/APPLIED question — actual computation, algorithmic trace, or quantitative analysis. NOT a pure definition.
 The specific topic and method for THIS question is in the user message — follow it exactly.
 Draw inspiration from GATE PYQs and Gateoverflow-style problems.
-MANDATORY MCQ: 4 options inside the problem field on separate lines: A) val\\nB) val\\nC) val\\nD) val
-Answer = correct option letter + complete step-by-step solution (show all intermediate values).
+MANDATORY MCQ RULES — FOLLOW EXACTLY:
+- Generate EXACTLY ONE question (not two, not a set).
+- Include exactly four options inside the problem field on separate lines: A) val\nB) val\nC) val\nD) val
+- Answer = correct option letter + complete step-by-step solution (show all intermediate values).
+- NEVER generate multiple questions each with their own A/B/C/D options.
 ${JSON_SCHEMA}`,
 
   ];
@@ -685,25 +699,33 @@ ${JSON_SCHEMA}`,
 // ─────────────────────────────────────────────
 //  PROBLEM PICKER — selects topic for each module
 // ─────────────────────────────────────────────
+// Pick a random pool item, strongly avoiding recently used tags.
+// Falls back to any item if everything was recently used.
+function pickFromPool(pool, recentTags) {
+  const notRecent = pool.filter(item => !recentTags.includes(item.tag));
+  const candidates = notRecent.length > 0 ? notRecent : pool;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 function pickTopicInstruction(modId) {
   const h = getHistory(modId);
-  const c = h.c;
-  const banned = h.topicLog.slice(-6).join(' | ') || 'none';
-  const avoid  = `\nDo NOT repeat these recent topics: ${banned}`;
+  // Use last 8 tags to avoid (wider window = better spread across all subtopics)
+  const recentTags = h.topicLog.slice(-8);
+  const banned     = recentTags.join(' | ') || 'none';
+  const avoid      = `\nDo NOT repeat these recent topics: ${banned}`;
 
-  let pool, key;
+  let pool;
   switch (modId) {
-    case 0: pool = BRAIN_POOL;   key = 'brain'; break;
-    case 5: pool = QUANT_POOL;   key = 'quant'; break;
-    case 6: pool = LR_POOL;      key = 'lr';    break;
-    case 7: pool = SCIENCE_POOL; key = 'sci';   break;
-    case 8: pool = GK_POOL;      key = 'gk';    break;
-    case 9: pool = GATE_POOL;    key = 'gate';  break;
+    case 0: pool = BRAIN_POOL;   break;
+    case 5: pool = QUANT_POOL;   break;
+    case 6: pool = LR_POOL;      break;
+    case 7: pool = SCIENCE_POOL; break;
+    case 8: pool = GK_POOL;      break;
+    case 9: pool = GATE_POOL;    break;
     default: return ''; // SQL/Excel/BI/Python don't use pools
   }
 
-  const item = pool[c[key] % pool.length];
-  c[key]++;
+  const item = pickFromPool(pool, recentTags);
   return `\nMANDATORY type for this question: [${item.tag}]\n${item.inst}${avoid}`;
 }
 
@@ -792,7 +814,10 @@ function isCompleteProblem(obj) {
 function problemLeaksAnswer(p) {
   if (!p || typeof p.problem !== 'string') return true;
   if (/(^|\n)\s*(answer|correct answer|solution|final answer)\s*[:\-]/i.test(p.problem)) return true;
-  if (/```/.test(p.problem)) return true; // code block in question = leak
+  if (/```/.test(p.problem)) return true;
+  // Detect multiple question sets: if A) appears more than once it means 2+ MCQ blocks
+  const aMatches = (p.problem.match(/\bA\)\s/g) || []).length;
+  if (aMatches > 1) return true; // two questions squeezed in — retry
   const ans = (p.answer||'').trim();
   if (ans && ans.length <= 50) {
     const norm = s => s.toLowerCase().replace(/\s+/g,' ').trim();
@@ -1071,10 +1096,19 @@ async function submitAnswer() {
     const result = safeParseJSON(raw);
     S.attempts[currentMod.id]++;
     S.scores[currentMod.id] += result.score;
-    if (result.score >= 70) {
+
+    // Dynamic leveling: go up on ≥80, hold on 55–79, go DOWN on <55
+    const lvlNow = S.levels[currentMod.id];
+    if (result.score >= 80) {
       S.streak++;
-      if (result.score >= 80) S.levels[currentMod.id] = Math.min(10, +(S.levels[currentMod.id] + 0.3).toFixed(1));
-    } else { S.streak = 0; }
+      S.levels[currentMod.id] = Math.min(10, +(lvlNow + 0.3).toFixed(1));
+    } else if (result.score >= 55) {
+      S.streak++;
+      // Hold level — no change
+    } else {
+      S.streak = 0;
+      S.levels[currentMod.id] = Math.max(1, +(lvlNow - 0.25).toFixed(2));
+    }
     saveState(S);
 
     const color = result.score >= 80 ? '#639922' : result.score >= 55 ? '#BA7517' : '#E24B4A';
