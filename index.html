@@ -97,6 +97,8 @@ pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-hei
 .topic-tag{display:inline-block;font-size:11px;padding:3px 11px;border-radius:99px;background:var(--bg2);color:var(--text3);border:.5px solid var(--border);margin-bottom:12px}
 .answer-reveal{display:none}.answer-reveal.visible{display:block}
 .mod-header-info{display:flex;align-items:center;gap:8px;flex:1;overflow:hidden}
+/* Token meter badge */
+.token-meter{font-size:10px;color:var(--text3);padding:2px 8px;border:.5px solid var(--border);border-radius:99px;white-space:nowrap}
 @media(max-width:500px){.provider-grid{grid-template-columns:1fr}.stats-bar{gap:16px}.stat-val{font-size:16px}}
 </style>
 </head>
@@ -164,6 +166,7 @@ pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-hei
       <span id="prob-modname" style="font-size:14px;font-weight:500;color:var(--text)"></span>
       <span id="prob-levelbadge" class="badge"></span>
     </div>
+    <span id="prob-token-meter" class="token-meter" title="Estimated input tokens for this call"></span>
     <button class="icon-btn" onclick="newProblem()">New 🔄</button>
   </div>
   <div class="container" style="padding-top:16px;padding-bottom:32px">
@@ -269,6 +272,73 @@ pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-hei
 
 <script>
 // ─────────────────────────────────────────────
+//  TOKEN UTILITIES
+//  slim()  — strips filler phrases from any string before it reaches the API.
+//  estTokens() — rough 4-chars-per-token estimate for display badge.
+// ─────────────────────────────────────────────
+
+// Patterns that add length without adding information for the model.
+// Order matters: longer/more-specific patterns first.
+const SLIM_RULES = [
+  // Verbose lead-ins (instruction preambles)
+  [/\bGenerate (a|an|one) /gi, ''],
+  [/\bProvide (a|an|the) /gi, ''],
+  [/\bCreate (a|an|one) /gi, ''],
+  [/\bWrite (a|an|one) /gi, ''],
+  [/\bProduce (a|an|one) /gi, ''],
+  [/\bMake sure (to |that )?/gi, ''],
+  [/\bEnsure (that |a )?/gi, ''],
+  [/\bMake certain (that )?/gi, ''],
+  [/\bPlease /gi, ''],
+  [/\bNote that /gi, ''],
+  [/\bNote: /gi, ''],
+  [/\bIMPORTANT: /gi, ''],
+  [/\bRemember (to |that )?/gi, ''],
+  [/\bAlways (make sure to |make sure |ensure that |remember to )?/gi, ''],
+  [/\bNever forget to /gi, 'Never '],
+  // Verbose connectors
+  [/\bin order to /gi, 'to '],
+  [/\bso that /gi, 'so '],
+  [/\bin the context of /gi, 'in '],
+  [/\bwith respect to /gi, 're '],
+  [/\bwith regard to /gi, 're '],
+  [/\bas well as /gi, 'and '],
+  [/\bdue to the fact that /gi, 'because '],
+  [/\bfor the purpose of /gi, 'for '],
+  [/\bfor each (of the )?/gi, 'per '],
+  [/\bat least one of the /gi, 'one of the '],
+  // Hedges / filler qualifiers
+  [/\b(very |quite |rather |somewhat |fairly |pretty )(specific|clear|concise|short|brief|small|concrete|realistic)/gi, '$2'],
+  [/\bshould be (clear|concise|specific|short|brief)/gi, 'must be $1'],
+  [/\bif (possible|applicable|relevant)/gi, ''],
+  [/\bwhere (possible|applicable|relevant)/gi, ''],
+  [/\bwhen (possible|applicable|relevant)/gi, ''],
+  [/\bif needed/gi, ''],
+  [/\bif necessary/gi, ''],
+  // Wordy numbering
+  [/\bexactly one \(1\)/gi, 'exactly one'],
+  [/\bone \(1\)/gi, 'one'],
+  [/\btwo \(2\)/gi, 'two'],
+  [/\bfour \(4\)/gi, 'four'],
+  // Double spaces from deletions
+  [/ {2,}/g, ' '],
+  // Trailing whitespace on lines
+  [/ +\n/g, '\n'],
+];
+
+function slim(text) {
+  if (!text) return text;
+  let s = text;
+  for (const [pat, rep] of SLIM_RULES) s = s.replace(pat, rep);
+  return s.trim();
+}
+
+function estTokens(text) {
+  // ~4 chars per token (rough universal heuristic)
+  return Math.round((text || '').length / 4);
+}
+
+// ─────────────────────────────────────────────
 //  MODULE DEFINITIONS
 // ─────────────────────────────────────────────
 const MODULES = [
@@ -314,21 +384,12 @@ let S = loadState();
 let currentMod = null, currentProblem = null, lastAnswer = '';
 
 // ─────────────────────────────────────────────
-//  SESSION HISTORY (avoid repetition)
+//  SESSION HISTORY  (avoid repetition)
 // ─────────────────────────────────────────────
 const sessionHistory = {};
 
 function getHistory(modId) {
-  if (!sessionHistory[modId]) {
-    sessionHistory[modId] = {
-      topicLog: [], signatureLog: [],
-      // rotating cursors start at random offset
-      c: Object.fromEntries(
-        ['brain','sql','excel','bi','python','quant','lr','sci','gk','gate']
-        .map(k => [k, Math.floor(Math.random() * 20)])
-      ),
-    };
-  }
+  if (!sessionHistory[modId]) sessionHistory[modId] = { topicLog:[], signatureLog:[] };
   return sessionHistory[modId];
 }
 
@@ -345,186 +406,164 @@ function normalizeSignature(text) {
 }
 
 // ─────────────────────────────────────────────
-//  TOPIC / TYPE POOLS
+//  TOPIC / TYPE POOLS  (inst fields are dense — no filler)
 // ─────────────────────────────────────────────
 
-// MOD 0: Brain Teasers — 50% theoretical riddles, 50% numerical logic
+// MOD 0: Brain Teasers
 const BRAIN_POOL = [
-  // Theoretical / lateral thinking
-  { tag:'lateral', inst:'Generate a lateral-thinking riddle with a clever, definitive answer. The setup should be counterintuitive. Provide the answer with a short logical explanation.' },
-  { tag:'riddle',  inst:'Generate a classic logic riddle (truth-teller/liar type, or object-based deduction). Clear premise, single correct answer.' },
-  { tag:'chess',   inst:'Describe a concrete chess board position in plain text notation (e.g., White: Kg1 Qd4 Rb1 | Black: Kg8 Re8 Nf6, White to move). Ask for the best move or mating sequence. Give the answer with move notation and reasoning.' },
-  { tag:'wordplay',inst:'Generate a wordplay/cryptic puzzle — a sentence or short paragraph where the hidden answer requires lateral thinking (not a math problem). Clear, unambiguous solution.' },
-  // Numerical / logical
-  { tag:'number-series',   inst:'Generate a number or letter series puzzle. Show 5–7 terms, ask for the next 2. Answer = the values with the rule explained.' },
-  { tag:'combinatorics',   inst:'Generate a short combinatorics or counting puzzle (arrangements, handshakes, paths on a grid). Numeric answer with working.' },
-  { tag:'logical-deduction',inst:'Generate a logical deduction puzzle: 3–4 people with clues about their positions or attributes. Ask who/what satisfies the condition. Answer with step-by-step deduction.' },
-  { tag:'geometry-puzzle', inst:'Generate a geometry puzzle solvable by insight rather than formula (e.g., shaded area, overlapping shapes). Include a plain-text diagram description. Numeric answer.' },
+  { tag:'lateral',          inst:'Lateral-thinking riddle. Counterintuitive setup, definitive answer, brief logic.' },
+  { tag:'riddle',           inst:'Logic riddle (truth-teller/liar or object deduction). Clear premise, single correct answer.' },
+  { tag:'chess',            inst:'Chess position in text notation (e.g. White:Kg1 Qd4 Rb1|Black:Kg8 Re8 Nf6, White to move). Ask best move or mating sequence. Answer: move notation + reasoning.' },
+  { tag:'wordplay',         inst:'Cryptic/wordplay puzzle. Hidden answer via lateral thinking, not math. Unambiguous solution.' },
+  { tag:'number-series',    inst:'Number/letter series, 5-7 terms. Ask next 2. Answer=values+rule explained.' },
+  { tag:'combinatorics',    inst:'Counting puzzle (arrangements, handshakes, grid paths). Numeric answer+working.' },
+  { tag:'logical-deduction',inst:'Deduction: 3-4 people, clues on positions/attributes. Step-by-step answer.' },
+  { tag:'geometry-puzzle',  inst:'Geometry insight puzzle (shaded area, overlapping shapes). Text diagram included. Numeric answer.' },
 ];
 
-// MOD 5: Quant Aptitude — rotating across all major type groups
+// MOD 5: Quant Aptitude
 const QUANT_POOL = [
-  // CI / SI
-  { tag:'CI/SI — Money Multiplier (AP vs GP)', inst:'SI/CI: A sum becomes X times in Y years. Find when it becomes Z times. Use AP logic for SI and GP/power logic for CI.' },
-  { tag:'CI/SI — Consecutive Year Ratio',     inst:'CI: Sum amounts to Rs A in n years and Rs B in n+1 years. Find the rate. Use the "gap = interest on prev amount" insight.' },
-  { tag:'CI/SI — SI vs CI 2-Year Difference', inst:'Find principal given difference between CI and SI for 2 years at given rate. Use successive % method.' },
-  { tag:'CI/SI — SI vs CI 3-Year Difference', inst:'Find principal given difference between CI and SI for 3 years. Use 3:3:1 ratio tree method.' },
-  { tag:'CI/SI — Half-Yearly/Quarterly',      inst:'CI compounded half-yearly or quarterly. Halve rate, double/quadruple time, then solve.' },
-  { tag:'CI/SI — Partial Year (e.g. 2Y 3M)',  inst:'CI for a mixed period like 2 years 3 months. Use chain multiplier method.' },
-  { tag:'CI/SI — Equal Annual Installments',  inst:'Loan repaid in equal annual CI installments. Find installment using ratio equator method.' },
-  // P/L
-  { tag:'P/L — Article Equality (CP of X = SP of Y)',      inst:'CP of x articles = SP of y articles. Find profit/loss %.' },
-  { tag:'P/L — Cross-Rate Transaction',                    inst:'Buy at rate a for Rs b, sell at rate c for Rs d. Find overall profit/loss %.' },
-  { tag:'P/L — Value Shift (% Gap)',                       inst:'Sold at x% loss; if sold for Rs Z more it shifts to y% profit. Find CP or SP.' },
-  { tag:'P/L — Symmetrical P&L (Midpoint)',                inst:'Profit at SP A = Loss at SP B (same amount). Find actual CP = midpoint.' },
-  { tag:'P/L — State Reversal / SP Fraction',              inst:'Selling at fraction of intended SP gives x% loss. Find gain at full SP, or find SP for target profit.' },
-  { tag:'P/L — CP:MP Golden Ratio',                        inst:'Link CP, MP, Profit %, Discount % via CP:MP = (100-D%):(100+P%) ratio.' },
-  { tag:'P/L — Dishonest Dealer (Faulty Weights)',         inst:'Dealer uses under-weight measure AND marks up price. Find actual profit % using physical inventory tracking.' },
-  { tag:'P/L — Same SP Symmetrical % Trap',               inst:'Two items sold at same SP — one at x% profit, other at x% loss. Net result is always a loss = (x²/100)%.' },
-  { tag:'P/L — Alligation in P&L',                        inst:'Sell fraction of inventory at x% profit and rest at y% to achieve z% overall. Use alligation to find ratio.' },
-  // TSD / Work
-  { tag:'TSD — Average Speed (2-leg journey)',             inst:'Travel A→B at S1 and B→A at S2. Find average speed for whole journey. Use harmonic mean.' },
-  { tag:'TSD — Meeting Point / Relative Speed',            inst:'Two persons/trains start from A and B simultaneously or with a time gap. When/where do they meet?' },
-  { tag:'TSD — Speed Change to Reach on Time',            inst:'Late by X min at S1, early by Y min at S2. Find distance or correct schedule time.' },
-  { tag:'TSD — Train Crossing Platform/Pole',             inst:'Train of length L takes T1 sec to cross a pole, T2 to cross a platform. Find speed or platform length.' },
-  { tag:'TSD — Two Trains Crossing Each Other',           inst:'Opposite or same direction: use relative speed and sum of lengths.' },
-  { tag:'TSD — Upstream Downstream',                      inst:'Boat/stream: downstream = u+v, upstream = u-v. Find speed or time.' },
-  { tag:'Work — Combined Efficiency',                     inst:'A does job in M days, B in N days. Together or A+B for X days then B leaves. MDH formula.' },
-  { tag:'Work — Pipes & Cisterns',                        inst:'Pipe A fills in X hrs, B fills in Y hrs, C drains in Z hrs. All open — when full? Or find leak rate.' },
-  // Mixture & Alligation
-  { tag:'Mixture — Two Vessels (Alligation Cross)',        inst:'Vessel A (conc X) + Vessel B (conc Y) = Mixture Z. Find ratio A:B using alligation cross.' },
-  { tag:'Mixture — Add Water/Milk to Change Ratio',       inst:'Mix M:W = a:b. Add W litres water to get p:q. Anchor on fixed component.' },
-  { tag:'Mixture — Successive Replacement',               inst:'Remove fraction and replace with water repeatedly n times. Find final concentration using ((T-R)/T)^n.' },
-  { tag:'Percentage — Successive % Change',               inst:'Increase x% then decrease y%. Net change using x+y+(xy/100). Apply with correct signs.' },
-  { tag:'Percentage — Income-Expenditure-Savings',        inst:'Income rises a%, expenditure rises b%. Find % change in savings. Use ratio method.' },
-  { tag:'Percentage — A is x% more/less than B',         inst:'A is x% more than B → B is ?% less than A. Denominator flip: x/(100±x)×100.' },
-  { tag:'Percentage — Price-Consumption Inverse',        inst:'Price rises x%. By how much must consumption fall to keep expenditure same? Answer: x/(100+x)×100.' },
-  // Ratio & Proportion
-  { tag:'Ratio — Age Puzzle (Present + Future/Past)',     inst:'A:B = p:q now, r:s after n years. Set up single equation and solve for ratio unit k.' },
-  { tag:'Ratio — Partnership Profit Sharing',            inst:'Partners invest different amounts for different periods. Profit ratio = Investment × Time.' },
-  { tag:'Ratio — Salary with Individual % Changes',      inst:'A:B = x:y. A\'s salary rises p%, B\'s rises q%. Find new ratio.' },
-  // Averages
-  { tag:'Average — Replacement Changes Average',         inst:'Replace 1 person/item; average shifts by d. Find new value = Old + n×d.' },
-  { tag:'Average — Entry/Exit of Member',                inst:'Member joins/leaves; use New Val = New Avg × New n − Old Avg × Old n.' },
-  // HCF / LCM
-  { tag:'HCF/LCM — Remainder-Based',                    inst:'Smallest number divisible by a,b,c leaving remainder r, OR with different remainders. LCM ± k method.' },
-  { tag:'HCF/LCM — Bell/Alarm Sync Interval',          inst:'Bells ring at intervals a,b,c. Next time they ring together = LCM(a,b,c). Count rings in H hours.' },
-  { tag:'HCF/LCM — Square Tile / Room Flooring',        inst:'Room L×B. Max tile size = HCF(L,B). Min tiles = (L×B)/HCF². Never use LCM here.' },
-  { tag:'HCF/LCM — Greatest Divisor with Remainder',   inst:'Greatest number that divides x,y,z leaving remainder r = HCF(x-r, y-r, z-r). If r unknown: HCF of pairwise differences.' },
-  // Algebra
-  { tag:'Algebra — Linear Equations (Word Problem)',     inst:'Set up and solve a linear equation from a word problem (age, number, money). Show variable setup clearly.' },
-  { tag:'Algebra — Quadratic Equations',                inst:'Form and solve a quadratic from a word problem (product of numbers, area, speed). Factorise or use formula.' },
-  { tag:'Algebra — Algebraic Identities',               inst:'Use standard identities (a+b)², (a-b)², a²-b², (a+b)³ etc. to simplify or find value without full expansion.' },
-  { tag:'Algebra — Surds and Indices',                  inst:'Simplify or compare surd/index expressions. Rationalise denominator or find the value of x in exponential equation.' },
-  { tag:'Algebra — Inequalities',                       inst:'Solve a linear or quadratic inequality and represent the solution. Word problem framing preferred.' },
-  { tag:'Algebra — Logarithms',                         inst:'Apply log rules: log(ab)=log a+log b, log(a/b)=log a-log b, log(aⁿ)=n·log a. Find value or simplify expression.' },
-  // Mensuration
-  { tag:'Mensuration — Area of 2D Figures',             inst:'Find area of a triangle, quadrilateral, trapezium, or circle (or combination). Real-world context preferred.' },
-  { tag:'Mensuration — Volume of 3D Solids',            inst:'Find volume of cube, cuboid, cylinder, cone, or sphere. Real-world context (tank, pipe, sphere).' },
-  { tag:'Mensuration — Surface Area (TSA/CSA)',         inst:'Find TSA or CSA of a 3D solid (cylinder, cone, sphere). Use standard formulas.' },
-  { tag:'Mensuration — Path / Border Problems',         inst:'Room with a path/border around it. Find area of path only. Use outer − inner area.' },
-  { tag:'Mensuration — Combined / Cut Shapes',          inst:'Volume/area after cutting or combining shapes (e.g., cylinder with conical top, hollow cylinder).' },
-  // Number System
-  { tag:'Number System — Divisibility Rules',           inst:'Apply divisibility rules for 2,3,4,6,7,8,9,11 to find digits or check divisibility.' },
-  { tag:'Number System — Unit Digit / Cyclicity',       inst:'Find unit digit of large power expressions using cyclicity (pattern of 4 for most digits).' },
-  { tag:'Number System — Factors and Multiples',        inst:'Find number of factors, sum of factors, or prime factorisation. Word problem context.' },
+  { tag:'CI/SI — Money Multiplier',          inst:'Sum becomes X times in Y yrs; find when Z times. AP for SI, GP for CI.' },
+  { tag:'CI/SI — Consecutive Year Ratio',    inst:'Sum→Rs A in n yrs, Rs B in n+1 yrs. Find rate via "gap=interest on prev amount".' },
+  { tag:'CI/SI — 2-Yr SI vs CI Diff',        inst:'Find principal given CI-SI diff for 2 yrs at given rate. Successive % method.' },
+  { tag:'CI/SI — 3-Yr SI vs CI Diff',        inst:'Find principal from CI-SI diff for 3 yrs. Use 3:3:1 ratio tree.' },
+  { tag:'CI/SI — Half-Yearly/Quarterly',     inst:'CI compounded half-yearly/quarterly. Halve rate, double/quadruple time.' },
+  { tag:'CI/SI — Partial Year',              inst:'CI for mixed period (e.g. 2y 3m). Chain multiplier method.' },
+  { tag:'CI/SI — Equal Annual Installments', inst:'Loan repaid in equal annual CI installments. Find installment via ratio equator.' },
+  { tag:'P/L — CP of X = SP of Y',           inst:'CP of x articles = SP of y articles. Find profit/loss %.' },
+  { tag:'P/L — Cross-Rate Transaction',      inst:'Buy at rate a for Rs b, sell at rate c for Rs d. Overall profit/loss %.' },
+  { tag:'P/L — Value Shift',                 inst:'Sold at x% loss; Rs Z more shifts to y% profit. Find CP or SP.' },
+  { tag:'P/L — Symmetrical P&L Midpoint',    inst:'Profit at SP A = Loss at SP B. CP = midpoint.' },
+  { tag:'P/L — SP Fraction State Reversal',  inst:'Selling at fraction of intended SP gives x% loss. Find gain at full SP.' },
+  { tag:'P/L — CP:MP Golden Ratio',          inst:'Link CP, MP, Profit%, Discount% via CP:MP=(100-D%):(100+P%).' },
+  { tag:'P/L — Dishonest Dealer',            inst:'Dealer uses under-weight AND marks up. Find actual profit% via inventory tracking.' },
+  { tag:'P/L — Same SP Symmetrical Trap',    inst:'Two items at same SP: one x% profit, other x% loss. Net loss=(x²/100)%.' },
+  { tag:'P/L — Alligation in P&L',           inst:'Fraction at x% profit, rest at y% for z% overall. Alligation for ratio.' },
+  { tag:'TSD — Average Speed',               inst:'A→B at S1, B→A at S2. Average speed = harmonic mean.' },
+  { tag:'TSD — Meeting Point',               inst:'Two start from A and B simultaneously or with gap. When/where do they meet?' },
+  { tag:'TSD — Speed Change On Time',        inst:'Late X min at S1, early Y min at S2. Find distance or correct schedule time.' },
+  { tag:'TSD — Train Crossing',              inst:'Train length L crosses pole in T1, platform in T2. Find speed or platform length.' },
+  { tag:'TSD — Two Trains Crossing',         inst:'Opposite/same direction: use relative speed + sum of lengths.' },
+  { tag:'TSD — Upstream Downstream',         inst:'Downstream=u+v, upstream=u-v. Find speed or time.' },
+  { tag:'Work — Combined Efficiency',        inst:'A does job in M days, B in N days. Together or partial then one leaves. MDH formula.' },
+  { tag:'Work — Pipes & Cisterns',           inst:'Pipe A fills X hrs, B fills Y hrs, C drains Z hrs. When full? Or find leak rate.' },
+  { tag:'Mixture — Alligation Cross',        inst:'Vessel A(conc X)+Vessel B(conc Y)=Mixture Z. Ratio A:B via alligation.' },
+  { tag:'Mixture — Add Water/Milk',          inst:'M:W=a:b. Add W litres water to get p:q. Anchor on fixed component.' },
+  { tag:'Mixture — Successive Replacement',  inst:'Remove fraction, replace with water n times. Final conc=((T-R)/T)^n.' },
+  { tag:'Percentage — Successive Change',    inst:'Increase x% then decrease y%. Net=x+y+(xy/100) with correct signs.' },
+  { tag:'Percentage — Income-Expense',       inst:'Income rises a%, expenditure rises b%. Find % change in savings. Ratio method.' },
+  { tag:'Percentage — A vs B Comparison',    inst:'A is x% more than B → B is ?% less than A. Denominator flip: x/(100±x)×100.' },
+  { tag:'Percentage — Price-Consumption',    inst:'Price rises x%. Consumption fall to keep expenditure same=x/(100+x)×100.' },
+  { tag:'Ratio — Age Puzzle',                inst:'A:B=p:q now, r:s after n yrs. Single equation, solve for k.' },
+  { tag:'Ratio — Partnership Profit',        inst:'Partners invest different amounts for different periods. Profit ratio=Investment×Time.' },
+  { tag:'Ratio — Salary % Changes',          inst:'A:B=x:y. A rises p%, B rises q%. Find new ratio.' },
+  { tag:'Average — Replacement',             inst:'Replace 1 person/item; average shifts by d. New value=Old+n×d.' },
+  { tag:'Average — Entry/Exit',              inst:'Member joins/leaves. New Val=New Avg×New n − Old Avg×Old n.' },
+  { tag:'HCF/LCM — Remainder-Based',         inst:'Smallest number divisible by a,b,c leaving remainder r. LCM±k method.' },
+  { tag:'HCF/LCM — Bell Sync',              inst:'Bells ring at intervals a,b,c. Next together=LCM(a,b,c). Count in H hours.' },
+  { tag:'HCF/LCM — Tile/Flooring',          inst:'Room L×B. Max tile=HCF(L,B). Min tiles=(L×B)/HCF². Never LCM.' },
+  { tag:'HCF/LCM — Greatest Divisor',       inst:'Greatest number dividing x,y,z leaving r=HCF(x-r,y-r,z-r). Or HCF of pairwise diffs.' },
+  { tag:'Algebra — Linear Equation',        inst:'Word problem (age/number/money). Set up and solve linear equation.' },
+  { tag:'Algebra — Quadratic',              inst:'Word problem (product/area/speed). Form and solve quadratic. Factorise or formula.' },
+  { tag:'Algebra — Identities',             inst:'Use (a+b)², (a-b)², a²-b², (a+b)³ to simplify without full expansion.' },
+  { tag:'Algebra — Surds & Indices',        inst:'Simplify surd/index expression. Rationalise denominator or solve x in exponential.' },
+  { tag:'Algebra — Inequalities',           inst:'Solve linear/quadratic inequality, represent solution. Word problem preferred.' },
+  { tag:'Algebra — Logarithms',             inst:'Apply: log(ab)=loga+logb, log(a/b)=loga-logb, log(aⁿ)=n·loga. Find value.' },
+  { tag:'Mensuration — Area 2D',            inst:'Area of triangle/quadrilateral/trapezium/circle or combination. Real-world context.' },
+  { tag:'Mensuration — Volume 3D',          inst:'Volume of cube/cuboid/cylinder/cone/sphere. Real-world context (tank/pipe).' },
+  { tag:'Mensuration — Surface Area',       inst:'TSA or CSA of cylinder/cone/sphere. Standard formulas.' },
+  { tag:'Mensuration — Path/Border',        inst:'Room with border. Area of path only=outer−inner area.' },
+  { tag:'Mensuration — Combined Shapes',    inst:'Volume/area after cutting or combining shapes (e.g. cylinder+conical top).' },
+  { tag:'Number — Divisibility',            inst:'Apply divisibility rules for 2,3,4,6,7,8,9,11. Find digit or check.' },
+  { tag:'Number — Unit Digit Cyclicity',    inst:'Unit digit of large power. Cyclicity of 4 for most digits.' },
+  { tag:'Number — Factors',                 inst:'Number of factors, sum of factors, or prime factorisation. Word problem.' },
 ];
 
 // MOD 6: LR & DI
 const LR_POOL = [
-  { tag:'Syllogism',              inst:'Generate a syllogism question with 2–3 statements. Ask which of the 4 conclusions (A–D) logically follow. Use Venn diagram logic. Make at least one conclusion tricky (partial/complementary).' },
-  { tag:'Statement & Conclusion',  inst:'Give 1–2 statements followed by 4 conclusions. Ask which conclusion(s) definitely follow. Trap: conclusions that are possible but not definite must be marked incorrect.' },
-  { tag:'Statement & Assumption',  inst:'A statement is given. 4 assumptions follow. Which assumption(s) are implicit? Distinguish between stated facts and hidden assumptions.' },
-  { tag:'Statement & Argument',    inst:'A debatable statement with 4 arguments (for/against). Identify which are strong arguments (relevant, logical, non-trivial).' },
-  { tag:'Linear Seating Arrangement', inst:'5–7 people in a single row or two facing rows. 4–6 position clues. Ask at least 2 questions about positions. Ensure unique solution.' },
-  { tag:'Circular Seating Arrangement', inst:'5–7 people sitting around a circular table (some facing in, some out). 4–6 clues. Ask 2 questions. Ensure unique solution.' },
-  { tag:'Floor / Building Puzzle',    inst:'6–7 people across 6–7 floors with attributes (profession, city, etc.). Clues about relative positions. Ask 2 questions.' },
-  { tag:'Scheduling Puzzle (Days/Months)', inst:'5–7 people assigned to different days/months. Clues with relative constraints. Ask 2 questions. Ensure unique solution.' },
-  { tag:'Blood Relations',        inst:'3–4 generation family with coded clues (e.g., "A is the mother of B\'s son"). Ask how X is related to Y. Show family tree in answer.' },
-  { tag:'Coding-Decoding',        inst:'Provide a coding rule (letter shift, reversal, symbol substitution). Give 2 coded words. Ask to decode a 3rd word or encode a given word.' },
-  { tag:'Direction Sense',        inst:'A person walks in multiple directions with distances. Find final distance from start and/or direction faced. Draw path in answer.' },
-  { tag:'Input-Output Machine',   inst:'Show a word/number arrangement machine with 3–4 steps of rearrangement. Ask what step 4 or 5 looks like, or what the input was given a step.' },
-  { tag:'Data Interpretation — Table', inst:'Provide a data table (5–6 rows, 4–5 columns, | separators) about a real Indian business/government scenario. Then ask EXACTLY ONE analytical question based on the data (percentage change, ratio, average, or comparison). MCQ with 4 options A–D. ONE question only.' },
-  { tag:'Data Interpretation — Bar/Line Graph', inst:'Describe bar chart or line graph data in a structured table (5–6 rows). Indian business/government context. Ask EXACTLY ONE analytical question (growth rate, highest/lowest, ratio). MCQ with 4 options A–D. ONE question only.' },
-  { tag:'Data Interpretation — Pie Chart', inst:'Describe a pie chart as percentages of a total (provide the actual total value). Ask EXACTLY ONE question (find actual value of a segment, or compare two segments). MCQ A–D. ONE question only.' },
+  { tag:'Syllogism',              inst:'2-3 statements, 4 conclusions A-D. Which follow? At least one tricky (partial/complementary). Venn logic.' },
+  { tag:'Statement & Conclusion', inst:'1-2 statements, 4 conclusions. Which DEFINITELY follow? Possible-but-not-definite=incorrect.' },
+  { tag:'Statement & Assumption', inst:'Statement + 4 assumptions. Which are implicit? Distinguish stated facts vs hidden assumptions.' },
+  { tag:'Statement & Argument',   inst:'Debatable statement + 4 for/against arguments. Identify strong (relevant, logical, non-trivial) ones.' },
+  { tag:'Linear Seating',         inst:'5-7 people in row or two facing rows. 4-6 position clues. Ask 2 position questions. Unique solution required.' },
+  { tag:'Circular Seating',       inst:'5-7 people around circular table (some facing out). 4-6 clues. 2 questions. Unique solution.' },
+  { tag:'Floor Puzzle',           inst:'6-7 people across floors with attributes. Relative position clues. Ask 2 questions.' },
+  { tag:'Scheduling Puzzle',      inst:'5-7 people assigned to days/months. Relative constraints. 2 questions. Unique solution.' },
+  { tag:'Blood Relations',        inst:'3-4 generation family with coded clues. Ask how X relates to Y. Show family tree in answer.' },
+  { tag:'Coding-Decoding',        inst:'Coding rule (shift/reversal/symbol). Two coded examples. Decode a 3rd or encode given word.' },
+  { tag:'Direction Sense',        inst:'Person walks multiple directions with distances. Find final distance+direction from start.' },
+  { tag:'Input-Output Machine',   inst:'Word/number arrangement machine, 3-4 rearrangement steps. Ask step 4/5 or reverse-engineer input.' },
+  { tag:'DI — Table',             inst:'Data table (5-6 rows, 4-5 cols, | sep), Indian context. EXACTLY ONE analytical question (%, ratio, avg, comparison). MCQ A-D.' },
+  { tag:'DI — Bar/Line',          inst:'Bar/line graph data as table (5-6 rows), Indian context. EXACTLY ONE question (growth rate, ratio, highest/lowest). MCQ A-D.' },
+  { tag:'DI — Pie Chart',         inst:'Pie chart as % of total (provide total value). EXACTLY ONE question (actual value or compare segments). MCQ A-D.' },
 ];
 
-// MOD 7: General Science — Physics/Chem numerical, Bio theoretical
+// MOD 7: General Science
 const SCIENCE_POOL = [
-  // Physics — numerical (6 slots, highest weight)
-  { tag:'Physics — Force & Motion (SUVAT)', cat:'phy', inst:'SUVAT equation problem: v=u+at, s=ut+½at², v²=u²+2as. Real-world scenario (vehicle, projectile). Numeric answer with units.' },
-  { tag:'Physics — Newton\'s Laws & Friction', cat:'phy', inst:'Apply Newton\'s 2nd or 3rd law. F=ma problem. Include friction force = μN if relevant. Numeric answer.' },
-  { tag:'Physics — Work, Energy & Power', cat:'phy', inst:'Use KE=½mv², PE=mgh, P=W/t or P=mgh/t. Energy conservation problem. Numeric answer.' },
-  { tag:'Physics — Current Electricity', cat:'phy', inst:'Ohm\'s law: V=IR. Power: P=VI or P=I²R. Series/parallel circuit problem. Find V, I, R, or P numerically.' },
-  { tag:'Physics — Optics (Mirror & Lens)', cat:'phy', inst:'Mirror formula 1/f=1/v+1/u OR Lens formula 1/f=1/v-1/u. Magnification m=-v/u. Find image position/size. Numeric answer.' },
-  { tag:'Physics — Waves & Sound', cat:'phy', inst:'v=fλ or v=λ/T. Speed of sound problem, or frequency/wavelength calculation. Numeric answer.' },
-  // Chemistry — numerical
-  { tag:'Chemistry — Mole Concept & Stoichiometry', cat:'chem', inst:'n = given mass / molar mass. Balance a chemical equation and calculate mass/volume of product or reactant. Numeric answer.' },
-  { tag:'Chemistry — Mass % & Concentration', cat:'chem', inst:'Mass% = (mass of solute / mass of solution)×100. Or [H⁺]=10⁻ⁿ → pH=n. Numeric calculation problem.' },
-  { tag:'Chemistry — Gas Laws', cat:'chem', inst:'Boyle\'s (P₁V₁=P₂V₂), Charles\' (V₁/T₁=V₂/T₂), or Combined gas law. Numeric answer with state change scenario.' },
-  { tag:'Chemistry — Periodic Table & Atomic Structure', cat:'chem', inst:'Factual/theoretical question on periodic trends (atomic radius, ionisation energy, electronegativity) or atomic structure (protons, neutrons, electron config). MCQ with 4 options.' },
-  // Biology — factual/theoretical
-  { tag:'Biology — Vitamins, Deficiency Diseases', cat:'bio', inst:'Factual MCQ: vitamin type (A/B/C/D/K/E), its function, source, and deficiency disease. 4 options A–D. Trap: confuse similar vitamins.' },
-  { tag:'Biology — Blood & Circulatory System', cat:'bio', inst:'Factual MCQ: blood types (ABO/Rh), blood cells (RBC/WBC/platelets), heart chambers, or blood vessels. 4 options A–D.' },
-  { tag:'Biology — Human Body Systems', cat:'bio', inst:'Factual MCQ: digestive, respiratory, or excretory system — organs, enzymes, or processes. 4 options A–D. Include one plausible distractor.' },
-  { tag:'Biology — Classification of Living Organisms', cat:'bio', inst:'Factual MCQ: Kingdom/Phylum/Class classification of a common organism, or features of a plant/animal kingdom. 4 options A–D.' },
-  { tag:'Biology — Genetics & Heredity', cat:'bio', inst:'Factual or Punnett-square MCQ: Mendel\'s laws, dominant/recessive traits, or monohybrid cross. 4 options A–D. Numeric ratio allowed (3:1, 1:2:1).' },
-  { tag:'Biology — Cell Biology & Biomolecules', cat:'bio', inst:'Factual MCQ: cell organelles and functions, or types of biomolecules (carbohydrates, proteins, lipids, nucleic acids). 4 options A–D.' },
+  { tag:'Physics — SUVAT',           cat:'phy', inst:'SUVAT: v=u+at, s=ut+½at², v²=u²+2as. Real-world scenario. Numeric answer+units.' },
+  { tag:'Physics — Newton/Friction',  cat:'phy', inst:'F=ma problem. Include friction μN if relevant. Numeric answer.' },
+  { tag:'Physics — Work-Energy-Power',cat:'phy', inst:'KE=½mv², PE=mgh, P=W/t. Energy conservation. Numeric answer.' },
+  { tag:'Physics — Electricity',      cat:'phy', inst:'V=IR, P=VI or P=I²R. Series/parallel circuit. Find V,I,R or P numerically.' },
+  { tag:'Physics — Optics',           cat:'phy', inst:'Mirror:1/f=1/v+1/u OR Lens:1/f=1/v-1/u. Magnification m=-v/u. Find image position/size.' },
+  { tag:'Physics — Waves/Sound',      cat:'phy', inst:'v=fλ or v=λ/T. Speed/frequency/wavelength problem. Numeric answer.' },
+  { tag:'Chemistry — Mole/Stoich',    cat:'chem',inst:'n=mass/molar mass. Balance equation, calc mass/volume of product or reactant.' },
+  { tag:'Chemistry — Conc/Mass%',     cat:'chem',inst:'Mass%=(solute/solution)×100. Or [H⁺]=10⁻ⁿ→pH=n. Numeric calculation.' },
+  { tag:'Chemistry — Gas Laws',       cat:'chem',inst:'Boyle P₁V₁=P₂V₂, Charles V₁/T₁=V₂/T₂, or combined. State-change scenario, numeric answer.' },
+  { tag:'Chemistry — Periodic/Atomic',cat:'chem',inst:'Periodic trends (radius, ionisation, electronegativity) or atomic structure. Factual MCQ A-D.' },
+  { tag:'Biology — Vitamins',         cat:'bio', inst:'MCQ: vitamin type A/B/C/D/K/E, function, source, deficiency disease. 4 options. Confuse similar vitamins.' },
+  { tag:'Biology — Blood/Circulation',cat:'bio', inst:'MCQ: blood types, RBC/WBC/platelets, heart chambers, blood vessels. 4 options A-D.' },
+  { tag:'Biology — Body Systems',     cat:'bio', inst:'MCQ: digestive/respiratory/excretory system — organs, enzymes, processes. 4 options. One plausible distractor.' },
+  { tag:'Biology — Classification',   cat:'bio', inst:'MCQ: Kingdom/Phylum/Class of common organism or features of plant/animal kingdom. 4 options.' },
+  { tag:'Biology — Genetics',         cat:'bio', inst:'MCQ or Punnett square: Mendel laws, dominant/recessive, monohybrid cross. 4 options. Numeric ratio OK.' },
+  { tag:'Biology — Cell/Biomolecules',cat:'bio', inst:'MCQ: organelles+functions or biomolecule types (carbs, proteins, lipids, nucleic acids). 4 options.' },
 ];
 
-// MOD 8: Current Affairs & GK — 50% CA, 50% Static GK — all factual MCQ
+// MOD 8: Current Affairs & GK
 const GK_POOL = [
-  // Current Affairs — MUST be from 2023–2025 events
-  { tag:'CA — Appointments & Leaders',       cat:'ca', inst:'MCQ on a real appointment from 2023–2025: head of government body, CEO of PSU, UN position, RBI governor, SEBI chief, or Indian cabinet minister. 4 options A–D. Prioritise events from last 12 months.' },
-  { tag:'CA — Awards & Honours',             cat:'ca', inst:'MCQ: a real award given in 2023–2025 — Padma (Bharat Ratna/Padma Vibhushan/Bhushan/Shri), Nobel Prize, Bharat Ratna, Khel Ratna, or international honour to an Indian. 4 options A–D.' },
-  { tag:'CA — Sports Events & Champions',    cat:'ca', inst:'MCQ: a real sports result from 2023–2025 — ICC World Cup, T20 WC, IPL, Asian Games 2023, Paris Olympics 2024, or CWG. Winner, venue, or record. 4 options A–D.' },
-  { tag:'CA — Major Summits & Agreements',   cat:'ca', inst:'MCQ: a real summit from 2023–2025 — G20 New Delhi 2023, SCO, BRICS (Johannesburg/Kazan), ASEAN, COP28/29, or a bilateral agreement. Host, theme, or key outcome. 4 options A–D.' },
-  { tag:'CA — Government Schemes & Missions',cat:'ca', inst:'MCQ: an Indian government scheme launched or updated in 2023–2025 — Viksit Bharat 2047, PM-JANMAN, PM Surya Ghar, NaMo Drone Didi, or existing scheme target update. Ministry, beneficiary, or target. 4 options A–D.' },
-  { tag:'CA — Science, Space & Defense',     cat:'ca', inst:'MCQ: a real event from 2023–2025 — Chandrayaan-3 (Aug 2023), Aditya-L1, Gaganyaan test, DRDO hypersonic missile, or a military exercise (Tasman Saber, Shakti, etc.). 4 options A–D.' },
-  { tag:'CA — Economy & Banking',            cat:'ca', inst:'MCQ: an RBI monetary policy decision, Union Budget 2024-25 headline, or recent economic indicator from 2023–2025 (GDP, CPI, repo rate change). 4 options A–D.' },
-  { tag:'CA — Environment & Climate',        cat:'ca', inst:'MCQ: COP28 (Dubai 2023) or COP29 outcome, India renewable energy milestone, Wildlife Protection Act update, or an endangered species declaration — all from 2023–2025. 4 options A–D.' },
-  // Static GK — History (10%)
-  { tag:'GK — Ancient India (IVC, Maurya, Gupta)', cat:'gk', inst:'MCQ on IVC features, Mauryan administration, Gupta achievements, trade routes, or ancient religious texts. 4 options A–D.' },
-  { tag:'GK — Medieval India (Mughal, Delhi Sultanate)', cat:'gk', inst:'MCQ on Mughal rulers, Delhi Sultanate, Bhakti/Sufi movement, architecture, or medieval administration. 4 options A–D.' },
-  { tag:'GK — Modern India (Freedom Struggle)', cat:'gk', inst:'MCQ: 1857 revolt, INC sessions, Gandhi\'s movements, Nehru report, Quit India, partition, or post-independence events. 4 options A–D.' },
-  { tag:'GK — Regional History (Gujarat & Rajasthan)', cat:'gk', inst:'MCQ: Gujarat (Solanki dynasty, Sardar Patel, textile heritage, GIFT City) OR Rajasthan (Rajput kingdoms, Havelis, fairs, Thar desert facts). 4 options A–D.' },
-  // Static GK — Polity (10%)
-  { tag:'GK — Constitution: Articles & Schedules', cat:'gk', inst:'MCQ: a specific constitutional article (FR, DPSP, or Fundamental Duties) or schedule (8th, 9th, 10th, 12th). Ask what it deals with or its number. 4 options A–D.' },
-  { tag:'GK — Parliament, Judiciary & Key Bodies', cat:'gk', inst:'MCQ: Lok Sabha/Rajya Sabha procedures, CAG, Election Commission, UPSC, Supreme Court jurisdiction, or Amendment procedure. 4 options A–D.' },
-  { tag:'GK — Amendments & Landmark Cases',       cat:'gk', inst:'MCQ: a key constitutional amendment (42nd, 44th, 73rd, 74th, 101st) or a Supreme Court landmark case (Kesavananda, Golaknath, Maneka Gandhi). 4 options A–D.' },
-  // Static GK — Geography (10%)
-  { tag:'GK — Indian Rivers, Dams & Reservoirs', cat:'gk', inst:'MCQ: river origin, course, tributaries, dam location, or interstate river dispute. 4 options A–D.' },
-  { tag:'GK — National Parks & Biosphere Reserves', cat:'gk', inst:'MCQ: which state a national park/sanctuary is in, the flagship species it protects, or UNESCO biosphere reserve status. 4 options A–D.' },
-  { tag:'GK — Regional Geography (GJ & RJ)',     cat:'gk', inst:'MCQ: Gujarat — districts, ports, wildlife sanctuaries, salt flats (Rann), pilgrimage sites OR Rajasthan — lakes, deserts, forts, climate. 4 options A–D.' },
-  // Static GK — Economy (5%)
-  { tag:'GK — Economic Revolutions & Committees', cat:'gk', inst:'MCQ: Green Revolution, White Revolution, Blue Revolution, or a finance/planning committee. Head, year, purpose. 4 options A–D.' },
-  // Static GK — Art & Culture (5%)
-  { tag:'GK — Classical Dance, Music & Festivals', cat:'gk', inst:'MCQ: classical dance form (Bharatanatyam, Kuchipudi, Garba, Bhangra) — origin state, key feature. OR festival origin and significance. 4 options A–D.' },
-  // Static GK — Computer Basics (5%)
-  { tag:'GK — Computer Basics (Hardware/Software/Internet)', cat:'gk', inst:'MCQ: basic computer hardware/software concept, internet protocol, storage units, or shortcut keys. Relevant to NTPC/Group-D level. 4 options A–D.' },
+  { tag:'CA — Appointments',        cat:'ca', inst:'MCQ: real 2023-2025 appointment (gov body head, PSU CEO, UN role, RBI/SEBI chief, cabinet minister). 4 options. Prefer last 12 months.' },
+  { tag:'CA — Awards',              cat:'ca', inst:'MCQ: real 2023-2025 award (Padma, Nobel, Bharat Ratna, Khel Ratna, or international honour to Indian). 4 options A-D.' },
+  { tag:'CA — Sports',              cat:'ca', inst:'MCQ: real 2023-2025 sports result (ICC WC, T20 WC, IPL, Asian Games 2023, Paris Olympics 2024, CWG). Winner/venue/record. 4 options.' },
+  { tag:'CA — Summits',             cat:'ca', inst:'MCQ: real 2023-2025 summit (G20 Delhi 2023, SCO, BRICS, ASEAN, COP28/29, bilateral). Host/theme/outcome. 4 options.' },
+  { tag:'CA — Schemes',             cat:'ca', inst:'MCQ: Indian scheme 2023-2025 (Viksit Bharat, PM-JANMAN, PM Surya Ghar, NaMo Drone Didi or update). Ministry/beneficiary/target. 4 options.' },
+  { tag:'CA — Science/Space/Defence',cat:'ca', inst:'MCQ: real 2023-2025 event (Chandrayaan-3 Aug2023, Aditya-L1, Gaganyaan test, DRDO missile, military exercise). 4 options.' },
+  { tag:'CA — Economy/Banking',     cat:'ca', inst:'MCQ: RBI policy, Union Budget 2024-25 headline, or economic indicator 2023-2025 (GDP, CPI, repo rate). 4 options.' },
+  { tag:'CA — Environment',         cat:'ca', inst:'MCQ: COP28/29 outcome, India renewable milestone, Wildlife Protection Act update, endangered species 2023-2025. 4 options.' },
+  { tag:'GK — Ancient India',       cat:'gk', inst:'MCQ: IVC features, Mauryan admin, Gupta achievements, trade routes, or ancient texts. 4 options.' },
+  { tag:'GK — Medieval India',      cat:'gk', inst:'MCQ: Mughal rulers, Delhi Sultanate, Bhakti/Sufi, architecture, or medieval admin. 4 options.' },
+  { tag:'GK — Modern India',        cat:'gk', inst:'MCQ: 1857 revolt, INC sessions, Gandhi movements, Quit India, partition. 4 options.' },
+  { tag:'GK — Gujarat/Rajasthan History', cat:'gk', inst:'MCQ: Gujarat (Solanki, Sardar Patel, GIFT City) OR Rajasthan (Rajput kingdoms, Havelis, Thar). 4 options.' },
+  { tag:'GK — Constitution Articles', cat:'gk', inst:'MCQ: specific article (FR/DPSP/FD) or schedule (8th/9th/10th/12th). Ask what it covers or its number. 4 options.' },
+  { tag:'GK — Parliament/Judiciary', cat:'gk', inst:'MCQ: Lok/Rajya Sabha procedure, CAG, Election Commission, UPSC, SC jurisdiction, or Amendment procedure. 4 options.' },
+  { tag:'GK — Amendments/Cases',    cat:'gk', inst:'MCQ: key amendment (42nd,44th,73rd,74th,101st) or SC landmark case (Kesavananda, Golaknath, Maneka Gandhi). 4 options.' },
+  { tag:'GK — Rivers/Dams',         cat:'gk', inst:'MCQ: river origin/course/tributaries, dam location, or interstate river dispute. 4 options.' },
+  { tag:'GK — National Parks',      cat:'gk', inst:'MCQ: NP/sanctuary state, flagship species, or UNESCO biosphere reserve. 4 options.' },
+  { tag:'GK — Geography GJ/RJ',     cat:'gk', inst:'MCQ: Gujarat (districts, ports, Rann, sanctuaries, pilgrimage) OR Rajasthan (lakes, forts, deserts, climate). 4 options.' },
+  { tag:'GK — Economic Revolutions', cat:'gk', inst:'MCQ: Green/White/Blue Revolution or finance/planning committee. Head/year/purpose. 4 options.' },
+  { tag:'GK — Art/Dance/Festivals', cat:'gk', inst:'MCQ: classical dance form origin+feature, or festival significance. 4 options.' },
+  { tag:'GK — Computer Basics',     cat:'gk', inst:'MCQ: hardware/software concept, internet protocol, storage units, or shortcut keys. NTPC/Group-D level. 4 options.' },
 ];
 
-// MOD 9: GATE CS — rotating numerical topics
+// MOD 9: GATE CS
 const GATE_POOL = [
-  { tag:'COA — Cache Memory (Hit Ratio / AMAT)', inst:'Give hit ratio, miss penalty, and access times. Calculate AMAT = H×Tc + (1-H)×Tm. Or find hit ratio given AMAT. Show step-by-step.' },
-  { tag:'COA — Pipeline Speedup & Hazards',      inst:'Pipeline with n stages, stage times given. Calculate throughput, speedup vs non-pipelined, or stall cycles due to a hazard. Numeric.' },
-  { tag:'COA — Addressing Modes & Instruction Encoding', inst:'Given an ISA format, determine the addressing mode used, compute effective address, or decode a machine instruction. Numeric or bit-level.' },
-  { tag:'COA — Virtual Memory & Page Table',     inst:'Given page size, logical/physical address bits, find number of pages, page table size, or physical address from virtual address. Numeric.' },
-  { tag:'OS — CPU Scheduling (Gantt Chart)',     inst:'Give 4–5 processes with arrival times and burst times. Draw Gantt chart for FCFS, SJF (non-preemptive), or Round Robin (quantum given). Compute avg waiting time and turnaround time.' },
-  { tag:'OS — Page Replacement (Reference String)', inst:'Give a reference string and number of frames. Apply FIFO, LRU, or Optimal page replacement. Count page faults. Show frame state after each access.' },
-  { tag:'OS — Deadlock — Banker\'s Algorithm',  inst:'Give allocation, max, and available matrices. Run Banker\'s safety algorithm. State whether system is safe and give safe sequence.' },
-  { tag:'OS — Semaphores & Synchronisation',    inst:'Given a producer-consumer or reader-writer problem with semaphores, trace execution or identify a race condition. Ask what value a semaphore holds after n operations.' },
-  { tag:'OS — Disk Scheduling (SSTF/SCAN)',     inst:'Give disk head position and queue of requests. Apply SSTF or SCAN. Calculate total head movement. Numeric.' },
-  { tag:'CN — Subnetting & VLSM',               inst:'Give a network address and required subnets/hosts. Find subnet mask, network address, broadcast address, usable host range for each subnet. Step-by-step.' },
-  { tag:'CN — TCP Flow & Congestion Control',   inst:'Trace TCP slow start or congestion avoidance: given initial cwnd and ssthresh, show cwnd values over rounds until timeout or threshold. Numeric.' },
-  { tag:'CN — Dijkstra\'s Shortest Path',       inst:'Give a weighted directed graph (5–6 nodes, table or adjacency list). Apply Dijkstra\'s. Show distance table updates at each step. Find shortest path from source.' },
-  { tag:'CN — Subnetting — Classes & CIDR',     inst:'Given CIDR notation, find number of hosts, network bits, and identify class. Or, given a host count, find the smallest subnet. Numeric.' },
-  { tag:'DSA — Time Complexity Analysis',       inst:'Give a code snippet with nested loops or recursion. Find tight Big-O, Big-Θ, or Big-Ω bound. Show derivation (recurrence or counting).' },
-  { tag:'DSA — Sorting Algorithm Trace',        inst:'Trace QuickSort (with pivot selection rule), MergeSort, or HeapSort on a given array of 6–8 elements. Show each pass/partition. Final sorted array.' },
-  { tag:'DSA — BST Operations & Traversal',    inst:'Given a sequence of insertions into a BST, draw the resulting tree. Then ask: inorder/preorder/postorder output, height, or successor of a node.' },
-  { tag:'DSA — Graph BFS/DFS Trace',           inst:'Give a graph as adjacency list. Trace BFS or DFS from a given source. Show visit order, queue/stack state at each step. Numeric or list answer.' },
-  { tag:'DSA — Dynamic Programming',           inst:'Apply DP to LCS, 0/1 Knapsack, or Matrix Chain Multiplication. Fill the DP table for given input. Numeric answer = optimal value + traceback.' },
-  { tag:'DSA — Hashing & Collision Resolution',inst:'Given a hash function and a sequence of keys, insert into a hash table using chaining or open addressing (linear probing). Show final table state. Numeric.' },
+  { tag:'COA — Cache/AMAT',         inst:'Hit ratio, miss penalty, access times. AMAT=H×Tc+(1-H)×Tm. Or find hit ratio given AMAT. Step-by-step.' },
+  { tag:'COA — Pipeline',           inst:'n-stage pipeline with stage times. Throughput, speedup vs non-pipelined, or stall cycles from hazard.' },
+  { tag:'COA — Addressing/ISA',     inst:'Given ISA format: determine addressing mode, compute effective address, or decode machine instruction.' },
+  { tag:'COA — Virtual Memory',     inst:'Page size, logical/physical address bits. Find page count, page table size, or physical address from virtual.' },
+  { tag:'OS — CPU Scheduling',      inst:'4-5 processes with arrival+burst times. Gantt chart for FCFS, SJF non-preemptive, or RR (quantum given). Avg wait+turnaround.' },
+  { tag:'OS — Page Replacement',    inst:'Reference string + frame count. FIFO, LRU, or Optimal. Count page faults. Show frame state per access.' },
+  { tag:'OS — Banker\'s Algorithm', inst:'Allocation, max, available matrices. Safety algorithm. Safe? If yes, give safe sequence.' },
+  { tag:'OS — Semaphores',          inst:'Producer-consumer or reader-writer with semaphores. Trace execution or find race condition. Semaphore value after n ops.' },
+  { tag:'OS — Disk Scheduling',     inst:'Disk head position + request queue. SSTF or SCAN. Total head movement. Numeric.' },
+  { tag:'CN — Subnetting/VLSM',     inst:'Network address + required subnets/hosts. Find subnet mask, network addr, broadcast, usable range per subnet.' },
+  { tag:'CN — TCP Flow Control',    inst:'TCP slow start or congestion avoidance: given cwnd+ssthresh, show cwnd per round until timeout. Numeric.' },
+  { tag:'CN — Dijkstra',            inst:'Weighted directed graph (5-6 nodes). Dijkstra step-by-step distance table. Shortest path from source.' },
+  { tag:'CN — CIDR/Classes',        inst:'CIDR notation → host count, network bits, class. Or given host count, find smallest subnet.' },
+  { tag:'DSA — Complexity',         inst:'Code snippet with nested loops or recursion. Tight Big-O/Θ/Ω. Show derivation (recurrence or counting).' },
+  { tag:'DSA — Sorting Trace',      inst:'Trace QuickSort/MergeSort/HeapSort on 6-8 element array. Show each pass. Final sorted array.' },
+  { tag:'DSA — BST',                inst:'Insert sequence into BST. Draw tree. Ask inorder/preorder/postorder, height, or successor.' },
+  { tag:'DSA — BFS/DFS',            inst:'Graph as adjacency list. BFS or DFS from source. Visit order, queue/stack state per step.' },
+  { tag:'DSA — DP',                 inst:'LCS, 0/1 Knapsack, or Matrix Chain Mult. Fill DP table. Optimal value + traceback.' },
+  { tag:'DSA — Hashing',            inst:'Hash function + key sequence. Chaining or linear probing. Final table state.' },
 ];
 
 // ─────────────────────────────────────────────
@@ -565,131 +604,56 @@ function saveSettings() {
 }
 
 // ─────────────────────────────────────────────
-//  SYSTEM PROMPTS — one per module
+//  SYSTEM PROMPTS  — dense, imperative, no filler
+//
+//  JSON_SCHEMA is defined once and referenced by all 10 prompts.
+//  ~45 tokens vs the original ~90 tokens. (-50%)
 // ─────────────────────────────────────────────
-const JSON_SCHEMA = `Return ONLY valid minified JSON — no markdown fences, no extra text.
-CRITICAL JSON RULES:
-1. Escape ALL newlines inside strings as \\n.
-2. Escape ALL internal double-quotes as \\".
-3. Math equations in plain text only (NO LaTeX backslashes).
-4. Conciseness to avoid cutoff: problem ≤140 words, explanation ≤110 words, hint ≤35 words, answer ≤80 words.
-5. MCQ modules MUST include options inside the problem field on separate lines: A) ...\\nB) ...\\nC) ...\\nD) ...
-6. NEVER reveal the answer inside the problem field.
-Schema: {"topic":"...","problem":"...","hint":"...","answer":"...","explanation":"..."}`;
+const JSON_SCHEMA = `JSON only, no fences. \\n for newlines, \\" for quotes, no LaTeX. Limits: problem≤140w, explanation≤110w, hint≤35w, answer≤80w. MCQ: A-D options in problem field on separate lines. Never put answer in problem. Schema:{"topic":"","problem":"","hint":"","answer":"","explanation":""}`;
 
 function getSysPrompt(modId, lvl) {
   const d = Math.round(lvl);
+  // Each prompt is compressed ~45-55% vs original.
   const prompts = [
 
-// 0 — Brain Teasers
-`You are a puzzle master generating mental challenge questions (NO physical exercises, NO workout routines).
-50% of questions must be theoretical (riddles, lateral thinking, chess puzzles) and 50% must be numerical/logical (series, combinatorics, geometric puzzles).
-The specific type for this question is provided in the user message — follow it exactly.
-Difficulty ${d}/10.
+// 0 — Brain Teasers  (~40 tokens vs ~120)
+`Puzzle master. NO exercise/workout content. 50% theoretical (riddles/lateral/chess/wordplay), 50% numerical (series/combinatorics/geometry/deduction). Type given in user msg — follow exactly. Diff ${d}/10.
 ${JSON_SCHEMA}`,
 
-// 1 — SQL (Data Analytics)
-`You are an expert SQL tutor for data analytics learners (difficulty ${d}/10).
-Context: business analyst querying real databases (sales, marketing, product, finance, customer data).
-ALWAYS provide: a realistic CREATE TABLE + INSERT with 5–6 rows of data, followed by a clear business analytics question.
-Answer = complete working SQL query with short inline comments.
-Scale by difficulty: 1–3 → SELECT/WHERE/GROUP BY/HAVING; 4–6 → JOINs/subqueries/CTEs; 7–10 → window functions (ROW_NUMBER, LAG, RANK, running totals, FIRST_VALUE).
-Analytics focus: cohort analysis, funnel metrics, YoY comparison, top-N per group, moving averages, retention.
-80% applied (write a query), 20% theoretical (explain a concept with example).
+// 1 — SQL  (~70 tokens vs ~150)
+`SQL analytics tutor, diff ${d}/10. Always: CREATE TABLE+INSERT 5-6 rows, then business analytics question. Answer=working SQL+inline comments. Scale: 1-3→SELECT/WHERE/GROUP BY/HAVING; 4-6→JOINs/subqueries/CTEs; 7-10→window fns (ROW_NUMBER,LAG,RANK,running totals,FIRST_VALUE). Focus: cohort, funnel, YoY, top-N, moving avg, retention. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 2 — Excel (Data Analytics)
-`You are an Excel expert tutor for data analytics learners (difficulty ${d}/10).
-Context: business analyst using Excel for KPI tracking, dashboards, data cleaning, and reporting.
-ALWAYS provide a small realistic data table (4–6 rows, | separators with column headers) then a specific analytics task.
-Answer = the exact formula or Power Query M-code step with the concrete computed result.
-Scale: 1–2 → SUM/AVERAGE/COUNT/IF; 3–4 → VLOOKUP/SUMIFS/COUNTIFS; 5–6 → INDEX-MATCH/XLOOKUP; 7–8 → dynamic arrays (FILTER/SORT/UNIQUE)/LAMBDA/LET; 9–10 → Pivot calculated fields, Power Query transformations.
-80% applied, 20% theoretical.
+// 2 — Excel  (~60 tokens vs ~130)
+`Excel analytics tutor, diff ${d}/10. Always: data table 4-6 rows (| sep)+analytics task. Answer=exact formula/M-code+computed result. Scale: 1-2→SUM/IF; 3-4→VLOOKUP/SUMIFS; 5-6→INDEX-MATCH/XLOOKUP; 7-8→FILTER/SORT/UNIQUE/LAMBDA/LET; 9-10→Power Query/Pivot calculated fields. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 3 — Data Visualisation (Power BI / Tableau)
-`You are a BI/analytics expert tutor covering Power BI and Tableau (difficulty ${d}/10).
-Context: data analyst building business dashboards, KPI reports, and analytical visuals.
-Alternate between Power BI (DAX) and Tableau (LOD/table calculations) each problem.
-ALWAYS provide a business scenario with table structure + 3–4 sample values, then ask for a specific measure/calculated field/visual configuration.
-Answer = the complete DAX measure OR Tableau calculated field / LOD expression.
-Scale: 1–3 → basic SUM/AVERAGE/COUNT; 4–5 → CALCULATE/FILTER/ALL (DAX) or FIXED LOD; 6–7 → time intelligence / INCLUDE/EXCLUDE LOD; 8–10 → RANKX/TOPN/RLS / complex table calculations.
-80% applied, 20% theoretical.
+// 3 — Data Visualisation  (~65 tokens vs ~140)
+`BI tutor (Power BI+Tableau), diff ${d}/10. Alternate Power BI (DAX) and Tableau (LOD) each problem. Always: business scenario+table 3-4 sample rows, then specific measure/visual task. Answer=complete DAX measure OR Tableau LOD/table-calc expression. Scale: 1-3→SUM/AVG; 4-5→CALCULATE/FILTER/ALL or FIXED LOD; 6-7→time intelligence/INCLUDE/EXCLUDE; 8-10→RANKX/TOPN/RLS/complex table calcs. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 4 — Python (Data Analytics)
-`You are a Python data analytics tutor (difficulty ${d}/10).
-STRICT FOCUS: real-world data analyst / data engineer / data scientist tasks using Pandas, NumPy, Matplotlib/Seaborn, Scikit-learn basics, and data cleaning.
-NO pure algorithmic/competitive programming problems (no Fibonacci, no sorting from scratch).
-Problems must feel like something a practitioner actually does: cleaning a messy dataset, computing business KPIs, detecting anomalies, merging data sources, building a simple model, etc.
-ALWAYS include: a concrete scenario + small sample DataFrame shown as a dict or list, specific analytics question, 2 expected output examples.
-The problem field must ask ONLY the question + input data. Do NOT include solution code or final results in the problem.
-Answer = complete working Python 3 code using data analytics libraries.
-Scale: 1–3 → Pandas basics (read/filter/groupby); 4–5 → merge/reshape/datetime; 6–7 → EDA/outlier/correlation; 8–10 → visualisation/ML basics/ETL pipeline.
-80% applied, 20% theoretical.
+// 4 — Python  (~75 tokens vs ~160)
+`Python data analytics tutor, diff ${d}/10. ONLY real analyst tasks (Pandas, NumPy, Matplotlib, Sklearn) — NO pure algo/competitive problems. Always: scenario+sample DataFrame as dict/list, analytics question, 2 expected outputs. Problem field=question+input only, no solution code. Answer=working Python 3. Scale: 1-3→filter/groupby; 4-5→merge/reshape/datetime; 6-7→EDA/outlier/correlation; 8-10→viz/ML basics/ETL. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 5 — Quant Aptitude
-`You are a Quantitative Aptitude tutor for Indian competitive exams: SSC CGL/CHSL/MTS, Railway (NTPC/Group-D/ALP), GPSC (Class 1–3), GSSSB, RPSC, RSMSSB (difficulty ${d}/10).
-At difficulty 1–5: SSC/Railway level — straightforward calculation.
-At difficulty 6–10: CAT/UPSC-level — multi-step traps, shortcut mastery required.
-The specific topic and method for THIS question is given in the user message — follow it exactly.
-Generate a word problem with specific numbers and a real-world Indian context.
-MANDATORY MCQ RULES — FOLLOW EXACTLY:
-- Generate EXACTLY ONE question (not two, not three — ONE).
-- Include exactly four options inside the problem field on separate lines: A) val\nB) val\nC) val\nD) val
-- The answer field must state the correct option letter + numeric value + concise step-by-step working (shortcut method preferred).
-- NEVER generate two separate questions each with their own A/B/C/D options.
+// 5 — Quant Aptitude  (~55 tokens vs ~120)
+`Quant aptitude tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. 1-5: SSC/Railway level. 6-10: CAT/UPSC multi-step shortcut mastery. Topic+method in user msg — follow exactly. Word problem, Indian context, specific numbers. MCQ RULES: EXACTLY ONE question, 4 options A-D in problem field, answer=letter+numeric+working (shortcut preferred). Never two separate MCQ blocks.
 ${JSON_SCHEMA}`,
 
-// 6 — LR & DI
-`You are an LR & DI tutor for Indian competitive exams: SSC, Railway, GPSC, RPSC, UPSC (difficulty ${d}/10).
-The specific type for THIS question is in the user message — follow it exactly.
-For syllogism and statement-conclusion questions: be rigorous — only DEFINITE conclusions are correct; "possible" ones are not.
-For seating/floor puzzles: ensure a unique solution exists.
-For DI: provide a realistic Indian data table (5–6 rows, | separators), then ask EXACTLY ONE analytical question based on the data.
-MANDATORY MCQ RULES — FOLLOW EXACTLY:
-- Generate EXACTLY ONE question with EXACTLY four options: A) ... B) ... C) ... D) (on separate lines in the problem field).
-- Do NOT ask two separate questions. ONE question, four options, one correct answer only.
-- Answer = correct option letter + step-by-step reasoning.
+// 6 — LR & DI  (~55 tokens vs ~120)
+`LR+DI tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. Type in user msg — follow exactly. Syllogism: definite conclusions only. Seating: unique solution required. DI: Indian data table (5-6 rows, | sep), EXACTLY ONE analytical question. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+step-by-step reasoning.
 ${JSON_SCHEMA}`,
 
-// 7 — General Science
-`You are a General Science tutor for Indian competitive exams: SSC, Railway NTPC/Group-D, GPSC, RPSC (difficulty ${d}/10).
-Physics & Chemistry: 90% numerical/applied, 10% theoretical. Use the specific topic from the user message.
-Biology: 100% factual/theoretical MCQ. Topics: vitamins, blood, body systems, classification, genetics, cell biology.
-MANDATORY MCQ RULES — FOLLOW EXACTLY:
-- Generate EXACTLY ONE question (not two, not a set).
-- Include exactly four options inside the problem field: A) val\nB) val\nC) val\nD) val
-- Do NOT generate multiple questions each with their own A/B/C/D.
-Physics answer: show formula → substitution → result with units.
-Chemistry answer: balanced equation if needed + calculation.
-Biology answer: correct fact + brief reason why each wrong option is incorrect.
+// 7 — General Science  (~50 tokens vs ~110)
+`General Science tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. Phy+Chem: 90% numerical, topic in user msg. Bio: factual MCQ only. MCQ RULES: ONE question, 4 options A-D in problem field. Phy answer: formula→substitution→result+units. Chem: equation+calc. Bio: correct fact+why each wrong option is incorrect.
 ${JSON_SCHEMA}`,
 
-// 8 — Current Affairs & GK
-`You are a Current Affairs and General Knowledge MCQ tutor for Indian exams: UPSC, GPSC, RPSC, SSC, Railway (difficulty ${d}/10).
-THIS MODULE IS 100% FACTUAL — no numericals, no applied problems, no calculations.
-The specific topic for THIS question is in the user message — follow it exactly.
-CA RECENCY RULE: Current Affairs questions MUST be based on events from 2023–2025 (last 2 years). Do NOT ask about events before 2023 for CA topics. The most recent events you know about are preferred.
-Static GK questions should cover facts that are frequently tested in GPSC, RPSC, RSMSSB, GSSSB, SSC, Railway exams, with occasional surprising/nuanced facts to avoid predictability.
-MANDATORY MCQ RULES — FOLLOW EXACTLY:
-- Generate EXACTLY ONE question (not two, not a set).
-- Include exactly four options inside the problem field: A) val\nB) val\nC) val\nD) val
-- Answer = correct option letter + the key fact.
-- Explanation = why correct option is right + why each of the other three options is wrong.
+// 8 — Current Affairs & GK  (~55 tokens vs ~120)
+`CA+GK MCQ tutor (UPSC/GPSC/RPSC/SSC), diff ${d}/10. 100% factual — no numericals. Topic in user msg. CA: events 2023-2025 ONLY; prefer most recent. Static GK: frequently tested facts, occasional surprising nuance. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+key fact. Explanation=why correct+why each other wrong.
 ${JSON_SCHEMA}`,
 
-// 9 — GATE CS
-`You are a GATE Computer Science tutor (difficulty ${d}/10).
-Generate a NUMERICAL/APPLIED question — actual computation, algorithmic trace, or quantitative analysis. NOT a pure definition.
-The specific topic and method for THIS question is in the user message — follow it exactly.
-Draw inspiration from GATE PYQs and Gateoverflow-style problems.
-MANDATORY MCQ RULES — FOLLOW EXACTLY:
-- Generate EXACTLY ONE question (not two, not a set).
-- Include exactly four options inside the problem field on separate lines: A) val\nB) val\nC) val\nD) val
-- Answer = correct option letter + complete step-by-step solution (show all intermediate values).
-- NEVER generate multiple questions each with their own A/B/C/D options.
+// 9 — GATE CS  (~45 tokens vs ~100)
+`GATE CS tutor, diff ${d}/10. NUMERICAL/APPLIED only — no pure definitions. Topic+method in user msg. GATE PYQ style. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+complete step-by-step solution (all intermediate values).
 ${JSON_SCHEMA}`,
 
   ];
@@ -697,10 +661,8 @@ ${JSON_SCHEMA}`,
 }
 
 // ─────────────────────────────────────────────
-//  PROBLEM PICKER — selects topic for each module
+//  PROBLEM PICKER
 // ─────────────────────────────────────────────
-// Pick a random pool item, strongly avoiding recently used tags.
-// Falls back to any item if everything was recently used.
 function pickFromPool(pool, recentTags) {
   const notRecent = pool.filter(item => !recentTags.includes(item.tag));
   const candidates = notRecent.length > 0 ? notRecent : pool;
@@ -709,10 +671,8 @@ function pickFromPool(pool, recentTags) {
 
 function pickTopicInstruction(modId) {
   const h = getHistory(modId);
-  // Use last 8 tags to avoid (wider window = better spread across all subtopics)
   const recentTags = h.topicLog.slice(-8);
-  const banned     = recentTags.join(' | ') || 'none';
-  const avoid      = `\nDo NOT repeat these recent topics: ${banned}`;
+  const banned = recentTags.join('|') || 'none';
 
   let pool;
   switch (modId) {
@@ -722,11 +682,12 @@ function pickTopicInstruction(modId) {
     case 7: pool = SCIENCE_POOL; break;
     case 8: pool = GK_POOL;      break;
     case 9: pool = GATE_POOL;    break;
-    default: return ''; // SQL/Excel/BI/Python don't use pools
+    default: return '';
   }
 
   const item = pickFromPool(pool, recentTags);
-  return `\nMANDATORY type for this question: [${item.tag}]\n${item.inst}${avoid}`;
+  // Keep avoid-list compact: just tags, no verbose preamble
+  return `\nType:[${item.tag}] ${item.inst}\nAvoid recent:[${banned}]`;
 }
 
 // ─────────────────────────────────────────────
@@ -746,7 +707,7 @@ const nextSetting = () => { const s = SETTINGS_POOL[settingIdx % SETTINGS_POOL.l
 
 function strongSeed() {
   const r = crypto.getRandomValues(new Uint32Array(2));
-  return `${Date.now()}-${performance.now().toFixed(4)}-${r[0].toString(36)}-${r[1].toString(36)}`;
+  return `${r[0].toString(36)}-${r[1].toString(36)}`;  // shorter than full Date.now() + perf
 }
 
 function pickDifficulty(base) {
@@ -755,16 +716,13 @@ function pickDifficulty(base) {
   return Math.min(10, Math.max(1, b + delta));
 }
 
+// buildUserMsg — trimmed ~35% vs original
 function buildUserMsg(modId, diff, topicInst) {
-  const h     = getHistory(modId);
-  const sigs  = h.signatureLog.slice(-5).join(' | ') || 'none';
-  const setting = (modId >= 1 && modId <= 4) ? `\nContext/setting for this problem: ${nextSetting()}.` : '';
-  const seeds = [Math.floor(Math.random()*900+100), Math.floor(Math.random()*9000+1000)].join(', ');
-  return `Difficulty: ${diff}/10.${setting}
-Use at least one of these seed numbers (where relevant): ${seeds}.
-Avoid repeating these problem patterns: ${sigs}.
-Entropy (ignore): ${strongSeed()}${topicInst}
-Generate one fresh, well-crafted problem now.`;
+  const h    = getHistory(modId);
+  const sigs = h.signatureLog.slice(-4).join('|') || 'none';  // was 5, reduced to 4
+  const ctx  = (modId >= 1 && modId <= 4) ? ` Ctx:${nextSetting()}.` : '';
+  const seed = Math.floor(Math.random()*9000+1000);
+  return `Diff:${diff}/10.${ctx} Seed:${seed}. Avoid patterns:[${sigs}]. Entropy:${strongSeed()}${topicInst}`;
 }
 
 // ─────────────────────────────────────────────
@@ -781,7 +739,6 @@ function repairJSON(raw) {
       .replace(/,\s*([}\]])/g, '$1')
       .replace(/\u0000/g, '');
     try { return JSON.parse(c); } catch(_){}
-    // truncation repair
     const qc = (c.match(/(?<!\\)"/g)||[]).length;
     if (qc % 2 !== 0) c += '"';
     const opens  = (c.match(/\{/g)||[]).length, closes = (c.match(/\}/g)||[]).length;
@@ -815,9 +772,8 @@ function problemLeaksAnswer(p) {
   if (!p || typeof p.problem !== 'string') return true;
   if (/(^|\n)\s*(answer|correct answer|solution|final answer)\s*[:\-]/i.test(p.problem)) return true;
   if (/```/.test(p.problem)) return true;
-  // Detect multiple question sets: if A) appears more than once it means 2+ MCQ blocks
   const aMatches = (p.problem.match(/\bA\)\s/g) || []).length;
-  if (aMatches > 1) return true; // two questions squeezed in — retry
+  if (aMatches > 1) return true;
   const ans = (p.answer||'').trim();
   if (ans && ans.length <= 50) {
     const norm = s => s.toLowerCase().replace(/\s+/g,' ').trim();
@@ -828,19 +784,25 @@ function problemLeaksAnswer(p) {
 
 // ─────────────────────────────────────────────
 //  API CALL
+//  maxTokens reduced: generation 1800 (was 2400), eval 500 (was 700)
+//  slim() applied to both system prompt and user message before sending.
 // ─────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function callAI(systemPrompt, userMsg, maxTokens = 2400) {
+async function callAI(systemPrompt, userMsg, maxTokens = 1800) {
   const provider = localStorage.getItem('dph_provider') || 'gemini';
   const key      = localStorage.getItem('dph_apiKey') || '';
   const def      = PROVIDERS[provider];
   const model    = (localStorage.getItem('dph_model')||'').trim() || def.model;
 
+  // Apply slim() to strip any residual filler before the strings hit the wire
+  const sysSlim  = slim(systemPrompt);
+  const userSlim = slim(userMsg);
+
   if (provider === 'gemini') {
     const url = def.url.replace('{model}', model).replace('{key}', key);
     const body = {
-      contents: [{ role:'user', parts:[{ text: systemPrompt + '\n\n' + userMsg }] }],
+      contents: [{ role:'user', parts:[{ text: sysSlim + '\n\n' + userSlim }] }],
       generationConfig: { maxOutputTokens: maxTokens, temperature: 1.0, responseMimeType:'application/json' }
     };
     const res  = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -860,7 +822,7 @@ async function callAI(systemPrompt, userMsg, maxTokens = 2400) {
     }
     const body = {
       model, max_tokens: maxTokens, temperature: 1.0,
-      messages: [{ role:'system', content:systemPrompt }, { role:'user', content:userMsg }],
+      messages: [{ role:'system', content:sysSlim }, { role:'user', content:userSlim }],
       response_format: { type:'json_object' }
     };
     const res  = await fetch(def.url, { method:'POST', headers, body:JSON.stringify(body) });
@@ -876,9 +838,9 @@ async function callAI(systemPrompt, userMsg, maxTokens = 2400) {
 // ─────────────────────────────────────────────
 function extractMcqOptions(text) {
   if (!text) return [];
-  const lines  = text.replace(/\\n/g,'\n').split('\n').map(l => l.trim()).filter(Boolean);
-  const opts   = [];
-  const seen   = new Set();
+  const lines = text.replace(/\\n/g,'\n').split('\n').map(l => l.trim()).filter(Boolean);
+  const opts  = [];
+  const seen  = new Set();
   for (const line of lines) {
     const m = line.match(/^([A-Da-d])\s*[\)\.\:\-]\s*(.+)$/);
     if (m && !seen.has(m[1].toUpperCase())) {
@@ -896,12 +858,12 @@ function renderMcqOptions(problemText) {
   wrap.innerHTML = '';
   if (!opts.length) { box.style.display = 'none'; return; }
   opts.forEach(opt => {
-    const lbl    = document.createElement('label');
+    const lbl   = document.createElement('label');
     lbl.className = 'mcq-option-label';
     if (currentMod) lbl.style.setProperty('--accent', currentMod.accent);
-    const radio  = Object.assign(document.createElement('input'), { type:'radio', name:'mcq-choice', value:opt.label });
-    const letter = Object.assign(document.createElement('span'), { className:'opt-letter', textContent: opt.label + ')' });
-    const span   = Object.assign(document.createElement('span'), { textContent: opt.text });
+    const radio = Object.assign(document.createElement('input'), { type:'radio', name:'mcq-choice', value:opt.label });
+    const letter= Object.assign(document.createElement('span'), { className:'opt-letter', textContent: opt.label + ')' });
+    const span  = Object.assign(document.createElement('span'), { textContent: opt.text });
     lbl.append(radio, letter, span);
     wrap.appendChild(lbl);
   });
@@ -988,6 +950,7 @@ function resetProblemUI() {
   document.getElementById('answer-reveal').classList.remove('visible');
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('submit-btn').textContent = 'Submit answer';
+  document.getElementById('prob-token-meter').textContent = '';
   if (currentMod) document.getElementById('submit-btn').style.setProperty('--accent', currentMod.accent);
 }
 
@@ -1001,16 +964,19 @@ async function generateProblem() {
   const diff = pickDifficulty(lvl);
   document.getElementById('prob-levelbadge').textContent = `Lvl ${Math.round(lvl)} · ${getLevelLabel(lvl)} (Q ${diff}/10)`;
 
-  const topicInst = pickTopicInstruction(currentMod.id);
+  const topicInst  = pickTopicInstruction(currentMod.id);
+  const sysPrompt  = getSysPrompt(currentMod.id, diff);
+  const userMsg    = buildUserMsg(currentMod.id, diff, topicInst);
+
+  // Show estimated token count in the topbar badge
+  const estimatedTokens = estTokens(slim(sysPrompt) + slim(userMsg));
+  document.getElementById('prob-token-meter').textContent = `~${estimatedTokens} tkns`;
 
   try {
     let parsed = null, lastErr = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const raw = await callAI(
-          getSysPrompt(currentMod.id, diff),
-          buildUserMsg(currentMod.id, diff, topicInst)
-        );
+        const raw = await callAI(sysPrompt, userMsg);
         parsed = safeParseJSON(raw);
         if (!isCompleteProblem(parsed))  throw new Error('Incomplete JSON — missing required fields.');
         if (problemLeaksAnswer(parsed))  throw new Error('Model leaked answer into problem field. Retrying.');
@@ -1069,11 +1035,9 @@ function handleKey(e) { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submi
 
 // ─────────────────────────────────────────────
 //  SUBMISSION & EVALUATION
+//  EVAL_PROMPT compressed ~45% vs original. maxTokens 500 (was 700).
 // ─────────────────────────────────────────────
-const EVAL_PROMPT = `You evaluate student answers for competitive exam and data skill practice.
-Be encouraging, precise, and fair. Give partial credit for partial understanding.
-Return ONLY valid JSON (no markdown):
-{"correct":true_or_false,"score":0_to_100,"verdict":"Correct! / Partially Correct / Incorrect","feedback":"2-3 sentences on what they got right or wrong","tip":"one key learning point"}`;
+const EVAL_PROMPT = `Evaluate student answers. Partial credit OK. Return JSON only:{"correct":bool,"score":0-100,"verdict":"Correct|Partially Correct|Incorrect","feedback":"2-3 sentences on right/wrong","tip":"one key lesson"}`;
 
 async function submitAnswer() {
   const ans = document.getElementById('answer-input').value.trim();
@@ -1088,23 +1052,21 @@ async function submitAnswer() {
   document.getElementById('fb-error').style.display    = 'none';
 
   try {
-    const raw    = await callAI(
-      EVAL_PROMPT,
-      `Module: ${currentMod.name}\nProblem: ${currentProblem.problem}\nCorrect Answer: ${currentProblem.answer}\nStudent Answer: ${ans}`,
-      700
+    // Eval user message is dynamic content — slim() strips any stray filler from student answers too
+    const evalUserMsg = slim(
+      `Module:${currentMod.name}\nProblem:${currentProblem.problem}\nCorrect:${currentProblem.answer}\nStudent:${ans}`
     );
+    const raw    = await callAI(EVAL_PROMPT, evalUserMsg, 500);
     const result = safeParseJSON(raw);
     S.attempts[currentMod.id]++;
     S.scores[currentMod.id] += result.score;
 
-    // Dynamic leveling: go up on ≥80, hold on 55–79, go DOWN on <55
     const lvlNow = S.levels[currentMod.id];
     if (result.score >= 80) {
       S.streak++;
       S.levels[currentMod.id] = Math.min(10, +(lvlNow + 0.3).toFixed(1));
     } else if (result.score >= 55) {
       S.streak++;
-      // Hold level — no change
     } else {
       S.streak = 0;
       S.levels[currentMod.id] = Math.max(1, +(lvlNow - 0.25).toFixed(2));
