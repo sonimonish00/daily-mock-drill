@@ -836,6 +836,26 @@ async function callAI(systemPrompt, userMsg, maxTokens = 1800) {
 // ─────────────────────────────────────────────
 //  MCQ RENDERING
 // ─────────────────────────────────────────────
+// Returns only lines that are NOT A-D option lines
+function extractQuestionStem(text) {
+  if (!text) return '';
+  return text.replace(/\\n/g,'\n')
+    .split('\n')
+    .filter(line => !line.trim().match(/^[A-Da-d]\s*[\)\.\:\-]\s*.+/))
+    .join('\n')
+    .trim();
+}
+
+// Returns only the question stem lines (filters out A-D option lines)
+function extractQuestionStem(text) {
+  if (!text) return '';
+  return text.replace(/\\n/g,'\n')
+    .split('\n')
+    .filter(line => !line.trim().match(/^[A-Da-d]\s*[\)\.:–\-]\s*.+/))
+    .join('\n')
+    .trim();
+}
+
 function extractMcqOptions(text) {
   if (!text) return [];
   const lines = text.replace(/\\n/g,'\n').split('\n').map(l => l.trim()).filter(Boolean);
@@ -993,13 +1013,21 @@ async function generateProblem() {
     currentProblem = parsed;
 
     const isCode = CODE_MODULES.has(currentMod.id);
+    const isMcq  = MCQ_MODULES.has(currentMod.id);
     document.getElementById('prob-topic').textContent = parsed.topic;
     const stmt = document.getElementById('prob-statement');
-    stmt.textContent = parsed.problem;
+    // MCQ modules: show ONLY the question stem here.
+    // A-D options go exclusively to the interactive MCQ box — prevents double-rendering.
+    if (isMcq) {
+      const stem = extractQuestionStem(parsed.problem);
+      stmt.textContent = stem || parsed.problem;
+    } else {
+      stmt.textContent = parsed.problem;
+    }
     stmt.className   = isCode ? 'code-text' : 'problem-text';
     document.getElementById('hint-box').textContent = parsed.hint;
     document.getElementById('answer-input').style.fontFamily = isCode ? 'var(--mono)' : 'var(--font)';
-    renderMcqOptions(parsed.problem);
+    renderMcqOptions(parsed.problem); // pass full text so parser finds A-D lines
 
     document.getElementById('prob-loading').style.display = 'none';
     document.getElementById('prob-content').style.display = 'block';
