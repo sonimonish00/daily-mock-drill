@@ -54,6 +54,7 @@ select option{background:var(--bg)}
 .mod-card .mod-sub{font-size:11px;color:var(--text3);margin-bottom:10px}
 .mod-card .mod-badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 9px;border-radius:99px;background:var(--mod-accent-light);color:var(--mod-accent)}
 .mod-card .mod-stats{font-size:11px;color:var(--text3);margin-top:7px}
+.mod-section-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);padding:8px 0 4px;border-bottom:.5px solid var(--border);margin-bottom:2px}
 .stats-bar{display:flex;gap:24px}
 .stat{text-align:center}
 .stat-val{font-size:20px;font-weight:500;color:var(--text)}
@@ -97,7 +98,6 @@ pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-hei
 .topic-tag{display:inline-block;font-size:11px;padding:3px 11px;border-radius:99px;background:var(--bg2);color:var(--text3);border:.5px solid var(--border);margin-bottom:12px}
 .answer-reveal{display:none}.answer-reveal.visible{display:block}
 .mod-header-info{display:flex;align-items:center;gap:8px;flex:1;overflow:hidden}
-/* Token meter badge */
 .token-meter{font-size:10px;color:var(--text3);padding:2px 8px;border:.5px solid var(--border);border-radius:99px;white-space:nowrap}
 @media(max-width:500px){.provider-grid{grid-template-columns:1fr}.stats-bar{gap:16px}.stat-val{font-size:16px}}
 </style>
@@ -146,13 +146,13 @@ pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-hei
       <div class="stats-bar">
         <div class="stat"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Streak 🔥</div></div>
         <div class="stat"><div class="stat-val" id="stat-solved">0</div><div class="stat-lbl">Solved</div></div>
-        <div class="stat"><div class="stat-val" id="stat-mods">0/10</div><div class="stat-lbl">Modules</div></div>
+        <div class="stat"><div class="stat-val" id="stat-mods">0/13</div><div class="stat-lbl">Modules</div></div>
       </div>
       <button class="icon-btn" onclick="showScreen('settings')" title="Settings">⚙</button>
     </div>
   </div>
   <div class="container">
-    <div class="module-grid" id="module-grid"></div>
+    <div id="module-grid"></div>
     <div class="footer-note">Click any module to practice · Score ≥80% levels up · Ctrl+Enter to submit</div>
   </div>
 </div>
@@ -273,14 +273,8 @@ pre.code-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-hei
 <script>
 // ─────────────────────────────────────────────
 //  TOKEN UTILITIES
-//  slim()  — strips filler phrases from any string before it reaches the API.
-//  estTokens() — rough 4-chars-per-token estimate for display badge.
 // ─────────────────────────────────────────────
-
-// Patterns that add length without adding information for the model.
-// Order matters: longer/more-specific patterns first.
 const SLIM_RULES = [
-  // Verbose lead-ins (instruction preambles)
   [/\bGenerate (a|an|one) /gi, ''],
   [/\bProvide (a|an|the) /gi, ''],
   [/\bCreate (a|an|one) /gi, ''],
@@ -296,7 +290,6 @@ const SLIM_RULES = [
   [/\bRemember (to |that )?/gi, ''],
   [/\bAlways (make sure to |make sure |ensure that |remember to )?/gi, ''],
   [/\bNever forget to /gi, 'Never '],
-  // Verbose connectors
   [/\bin order to /gi, 'to '],
   [/\bso that /gi, 'so '],
   [/\bin the context of /gi, 'in '],
@@ -307,7 +300,6 @@ const SLIM_RULES = [
   [/\bfor the purpose of /gi, 'for '],
   [/\bfor each (of the )?/gi, 'per '],
   [/\bat least one of the /gi, 'one of the '],
-  // Hedges / filler qualifiers
   [/\b(very |quite |rather |somewhat |fairly |pretty )(specific|clear|concise|short|brief|small|concrete|realistic)/gi, '$2'],
   [/\bshould be (clear|concise|specific|short|brief)/gi, 'must be $1'],
   [/\bif (possible|applicable|relevant)/gi, ''],
@@ -315,14 +307,11 @@ const SLIM_RULES = [
   [/\bwhen (possible|applicable|relevant)/gi, ''],
   [/\bif needed/gi, ''],
   [/\bif necessary/gi, ''],
-  // Wordy numbering
   [/\bexactly one \(1\)/gi, 'exactly one'],
   [/\bone \(1\)/gi, 'one'],
   [/\btwo \(2\)/gi, 'two'],
   [/\bfour \(4\)/gi, 'four'],
-  // Double spaces from deletions
   [/ {2,}/g, ' '],
-  // Trailing whitespace on lines
   [/ +\n/g, '\n'],
 ];
 
@@ -334,29 +323,32 @@ function slim(text) {
 }
 
 function estTokens(text) {
-  // ~4 chars per token (rough universal heuristic)
   return Math.round((text || '').length / 4);
 }
 
 // ─────────────────────────────────────────────
 //  MODULE DEFINITIONS
+//  Section grouping for home screen display
 // ─────────────────────────────────────────────
 const MODULES = [
-  { id:0, name:'Brain Teasers',            emoji:'🧠', accent:'#D85A30', sub:'Riddles · Logic · Lateral Thinking' },
-  { id:1, name:'SQL',                      emoji:'🗄️', accent:'#378ADD', sub:'Analytics · Joins · Window Fns' },
-  { id:2, name:'Excel',                    emoji:'📊', accent:'#639922', sub:'Formulas · Power Query · Pivot' },
-  { id:3, name:'Data Visualisation',       emoji:'📈', accent:'#7F77DD', sub:'Power BI DAX · Tableau LOD · KPIs' },
-  { id:4, name:'Python',                   emoji:'🐍', accent:'#1D9E75', sub:'Pandas · NumPy · EDA · ML Basics' },
-  { id:5, name:'Quant Aptitude',           emoji:'🔢', accent:'#BA7517', sub:'SSC · Railway · GPSC · RPSC · MCQ' },
-  { id:6, name:'Logical Reasoning & DI',   emoji:'🧩', accent:'#D4537E', sub:'Seating · Syllogism · DI Tables' },
-  { id:7, name:'General Science',          emoji:'🔬', accent:'#185FA5', sub:'Physics · Chemistry · Biology' },
-  { id:8, name:'Current Affairs & GK',     emoji:'🌐', accent:'#A32D2D', sub:'UPSC · GPSC · RPSC Level MCQ' },
-  { id:9, name:'GATE CS',                  emoji:'💻', accent:'#534AB7', sub:'COA · OS · CN · DSA · Numericals' },
+  { id:0,  name:'Brain Teasers',              emoji:'🧠', accent:'#D85A30', sub:'Riddles · Logic · Lateral Thinking',      section:'Core Skills' },
+  { id:1,  name:'SQL',                        emoji:'🗄️', accent:'#378ADD', sub:'Analytics · Joins · Window Fns',           section:'Core Skills' },
+  { id:2,  name:'Excel',                      emoji:'📊', accent:'#639922', sub:'Formulas · Power Query · Pivot',           section:'Core Skills' },
+  { id:3,  name:'Data Visualisation',         emoji:'📈', accent:'#7F77DD', sub:'Power BI DAX · Tableau LOD · KPIs',        section:'Core Skills' },
+  { id:4,  name:'Python',                     emoji:'🐍', accent:'#1D9E75', sub:'Pandas · NumPy · EDA · ML Basics',         section:'Core Skills' },
+  { id:5,  name:'Quant Aptitude',             emoji:'🔢', accent:'#BA7517', sub:'SSC · Railway · GPSC · RPSC · MCQ',        section:'Aptitude & Reasoning' },
+  { id:6,  name:'Logical Reasoning & DI',     emoji:'🧩', accent:'#D4537E', sub:'Seating · Syllogism · DI Tables',          section:'Aptitude & Reasoning' },
+  { id:7,  name:'General Science',            emoji:'🔬', accent:'#185FA5', sub:'Physics · Chemistry · Biology',            section:'Aptitude & Reasoning' },
+  { id:8,  name:'UPSC & SSC GK',              emoji:'🏛️', accent:'#A32D2D', sub:'History · Polity · Eco · SSC JSO',         section:'GK & Current Affairs' },
+  { id:9,  name:'GATE CS',                    emoji:'💻', accent:'#534AB7', sub:'COA · OS · CN · DSA · Numericals',         section:'Core Skills' },
+  { id:10, name:'Railways GK',               emoji:'🚆', accent:'#185FA5', sub:'RRB NTPC Graduate · Group D',               section:'GK & Current Affairs' },
+  { id:11, name:'Gujarat State GK',          emoji:'🦁', accent:'#1D9E75', sub:'GSSSB CCE · GPSC Forest/GAS · GHC',        section:'GK & Current Affairs' },
+  { id:12, name:'Rajasthan State GK',        emoji:'🏰', accent:'#BA7517', sub:'RSMSSB Anudeshak · RPSC · Computer Instr', section:'GK & Current Affairs' },
 ];
 
 const LEVEL_LABELS = ['','Beginner','Beginner+','Easy','Easy+','Medium','Medium+','Hard','Hard+','Expert','Master'];
 const CODE_MODULES = new Set([1,2,3,4,9]);
-const MCQ_MODULES  = new Set([5,6,7,8,9]);
+const MCQ_MODULES  = new Set([5,6,7,8,9,10,11,12]);
 
 const getLevelLabel = l => LEVEL_LABELS[Math.min(10, Math.round(l))];
 
@@ -366,13 +358,20 @@ const getLevelLabel = l => LEVEL_LABELS[Math.min(10, Math.round(l))];
 const STATE_KEYS = { levels:'dph_levels', attempts:'dph_attempts', scores:'dph_scores', streak:'dph_streak' };
 
 function loadState() {
-  return {
-    levels:   JSON.parse(localStorage.getItem(STATE_KEYS.levels)   || JSON.stringify(MODULES.map(()=>1))),
-    attempts: JSON.parse(localStorage.getItem(STATE_KEYS.attempts) || JSON.stringify(MODULES.map(()=>0))),
-    scores:   JSON.parse(localStorage.getItem(STATE_KEYS.scores)   || JSON.stringify(MODULES.map(()=>0))),
+  const n = MODULES.length;
+  const raw = {
+    levels:   JSON.parse(localStorage.getItem(STATE_KEYS.levels)   || '[]'),
+    attempts: JSON.parse(localStorage.getItem(STATE_KEYS.attempts) || '[]'),
+    scores:   JSON.parse(localStorage.getItem(STATE_KEYS.scores)   || '[]'),
     streak:   parseInt(localStorage.getItem(STATE_KEYS.streak)||'0'),
   };
+  // Normalize arrays to match current module count (handles upgrades from older versions)
+  while (raw.levels.length < n)   raw.levels.push(1);
+  while (raw.attempts.length < n) raw.attempts.push(0);
+  while (raw.scores.length < n)   raw.scores.push(0);
+  return raw;
 }
+
 function saveState(s) {
   localStorage.setItem(STATE_KEYS.levels,   JSON.stringify(s.levels));
   localStorage.setItem(STATE_KEYS.attempts, JSON.stringify(s.attempts));
@@ -384,7 +383,7 @@ let S = loadState();
 let currentMod = null, currentProblem = null, lastAnswer = '';
 
 // ─────────────────────────────────────────────
-//  SESSION HISTORY  (avoid repetition)
+//  SESSION HISTORY
 // ─────────────────────────────────────────────
 const sessionHistory = {};
 
@@ -406,7 +405,7 @@ function normalizeSignature(text) {
 }
 
 // ─────────────────────────────────────────────
-//  TOPIC / TYPE POOLS  (inst fields are dense — no filler)
+//  TOPIC POOLS
 // ─────────────────────────────────────────────
 
 // MOD 0: Brain Teasers
@@ -518,29 +517,158 @@ const SCIENCE_POOL = [
   { tag:'Biology — Cell/Biomolecules',cat:'bio', inst:'MCQ: organelles+functions or biomolecule types (carbs, proteins, lipids, nucleic acids). 4 options.' },
 ];
 
-// MOD 8: Current Affairs & GK
-const GK_POOL = [
-  { tag:'CA — Appointments',        cat:'ca', inst:'MCQ: real 2023-2025 appointment (gov body head, PSU CEO, UN role, RBI/SEBI chief, cabinet minister). 4 options. Prefer last 12 months.' },
-  { tag:'CA — Awards',              cat:'ca', inst:'MCQ: real 2023-2025 award (Padma, Nobel, Bharat Ratna, Khel Ratna, or international honour to Indian). 4 options A-D.' },
-  { tag:'CA — Sports',              cat:'ca', inst:'MCQ: real 2023-2025 sports result (ICC WC, T20 WC, IPL, Asian Games 2023, Paris Olympics 2024, CWG). Winner/venue/record. 4 options.' },
-  { tag:'CA — Summits',             cat:'ca', inst:'MCQ: real 2023-2025 summit (G20 Delhi 2023, SCO, BRICS, ASEAN, COP28/29, bilateral). Host/theme/outcome. 4 options.' },
-  { tag:'CA — Schemes',             cat:'ca', inst:'MCQ: Indian scheme 2023-2025 (Viksit Bharat, PM-JANMAN, PM Surya Ghar, NaMo Drone Didi or update). Ministry/beneficiary/target. 4 options.' },
-  { tag:'CA — Science/Space/Defence',cat:'ca', inst:'MCQ: real 2023-2025 event (Chandrayaan-3 Aug2023, Aditya-L1, Gaganyaan test, DRDO missile, military exercise). 4 options.' },
-  { tag:'CA — Economy/Banking',     cat:'ca', inst:'MCQ: RBI policy, Union Budget 2024-25 headline, or economic indicator 2023-2025 (GDP, CPI, repo rate). 4 options.' },
-  { tag:'CA — Environment',         cat:'ca', inst:'MCQ: COP28/29 outcome, India renewable milestone, Wildlife Protection Act update, endangered species 2023-2025. 4 options.' },
-  { tag:'GK — Ancient India',       cat:'gk', inst:'MCQ: IVC features, Mauryan admin, Gupta achievements, trade routes, or ancient texts. 4 options.' },
-  { tag:'GK — Medieval India',      cat:'gk', inst:'MCQ: Mughal rulers, Delhi Sultanate, Bhakti/Sufi, architecture, or medieval admin. 4 options.' },
-  { tag:'GK — Modern India',        cat:'gk', inst:'MCQ: 1857 revolt, INC sessions, Gandhi movements, Quit India, partition. 4 options.' },
-  { tag:'GK — Gujarat/Rajasthan History', cat:'gk', inst:'MCQ: Gujarat (Solanki, Sardar Patel, GIFT City) OR Rajasthan (Rajput kingdoms, Havelis, Thar). 4 options.' },
-  { tag:'GK — Constitution Articles', cat:'gk', inst:'MCQ: specific article (FR/DPSP/FD) or schedule (8th/9th/10th/12th). Ask what it covers or its number. 4 options.' },
-  { tag:'GK — Parliament/Judiciary', cat:'gk', inst:'MCQ: Lok/Rajya Sabha procedure, CAG, Election Commission, UPSC, SC jurisdiction, or Amendment procedure. 4 options.' },
-  { tag:'GK — Amendments/Cases',    cat:'gk', inst:'MCQ: key amendment (42nd,44th,73rd,74th,101st) or SC landmark case (Kesavananda, Golaknath, Maneka Gandhi). 4 options.' },
-  { tag:'GK — Rivers/Dams',         cat:'gk', inst:'MCQ: river origin/course/tributaries, dam location, or interstate river dispute. 4 options.' },
-  { tag:'GK — National Parks',      cat:'gk', inst:'MCQ: NP/sanctuary state, flagship species, or UNESCO biosphere reserve. 4 options.' },
-  { tag:'GK — Geography GJ/RJ',     cat:'gk', inst:'MCQ: Gujarat (districts, ports, Rann, sanctuaries, pilgrimage) OR Rajasthan (lakes, forts, deserts, climate). 4 options.' },
-  { tag:'GK — Economic Revolutions', cat:'gk', inst:'MCQ: Green/White/Blue Revolution or finance/planning committee. Head/year/purpose. 4 options.' },
-  { tag:'GK — Art/Dance/Festivals', cat:'gk', inst:'MCQ: classical dance form origin+feature, or festival significance. 4 options.' },
-  { tag:'GK — Computer Basics',     cat:'gk', inst:'MCQ: hardware/software concept, internet protocol, storage units, or shortcut keys. NTPC/Group-D level. 4 options.' },
+// ─────────────────────────────────────────────
+//  MOD 8: UPSC & SSC GK (SSC JSO focus)
+//  Framework: Narrative engine for Static GK (History/Polity/Geo/Eco),
+//  Anchor Card style for CA. Explanations follow: Fact → Hook → Why Exam Asks.
+// ─────────────────────────────────────────────
+const UPSC_SSC_GK_POOL = [
+  { tag:'Ancient — IVC',              inst:'MCQ: IVC features, sites (Harappa/Mohenjo-daro/Lothal/Dholavira/Kalibangan), trade, script, or decline. 4 options. At least one trap option (e.g. confuse Lothal with another site).' },
+  { tag:'Ancient — Mauryan',          inst:'MCQ: Mauryan admin, Ashoka edicts/scripts (Brahmi/Kharosthi), Chanakya/Arthashastra, Megasthenes/Indica, Kalinga War 261BC. 4 options.' },
+  { tag:'Ancient — Gupta',            inst:'MCQ: Gupta rulers, Prayag Prashasti (Samudragupta), Fa-Hien visit, Aryabhata, Kalidasa/Navratnas, Golden Age. 4 options.' },
+  { tag:'Ancient — Trade & Religion', inst:'MCQ: Ancient trade routes (Silk Road, spice trade), Buddhist councils, Jainism (Mahavira/24 Tirthankaras), Sangam literature. 4 options.' },
+  { tag:'Medieval — Delhi Sultanate', inst:'MCQ: Delhi Sultanate rulers (Qutb-ud-din/Iltutmish/Alauddin/Muhammad Tughlaq/Firuz Shah), iqta system, or architecture. 4 options.' },
+  { tag:'Medieval — Mughals',         inst:'MCQ: Mughal rulers, battles (Panipat I 1526/II 1556/III 1761), Mansabdari, Din-i-Ilahi, Zabti revenue, architecture. 4 options.' },
+  { tag:'Medieval — Bhakti/Sufi',     inst:'MCQ: Bhakti saints (Kabir/Meera/Tukaram/Chaitanya/Ramananda) or Sufi orders (Chishti/Suhrawardi). Founder, philosophy, region. 4 options.' },
+  { tag:'Medieval — Other Kingdoms',  inst:'MCQ: Vijayanagara (Krishnadevaraya/Amuktamalyada/Nayaka/Mahanayakacharya), Chola maritime, or Maratha (Chauth/Sardeshmukhi). 4 options.' },
+  { tag:'Modern — 1857 Revolt',       inst:'MCQ: 1857 revolt — started Meerut (Mangal Pandey at Barrackpore), centers (Jhansi/Lucknow/Bihar), end of EIC, Crown Rule 1858. 4 options.' },
+  { tag:'Modern — INC Sessions',      inst:'MCQ: Key INC sessions — 1885 Bombay (WC Bonnerjee), 1907 Surat split, 1911 Jana Gana Mana, 1916 Lucknow Pact, 1924 Belgaum (Gandhi), 1929 Lahore (Purna Swaraj). 4 options.' },
+  { tag:'Modern — Gandhi Movements',  inst:'MCQ: Champaran 1917, Kheda 1918, Non-Cooperation 1920/Chauri Chaura 1922, Civil Disobedience/Dandi March 1930, Quit India 1942. Year, trigger, result. 4 options.' },
+  { tag:'Modern — Governor-Generals', inst:'MCQ: Governor-General policy — Dalhousie (Doctrine of Lapse, 1st Railway 1853), Ripon (Local Self-Govt), Curzon (Bengal Partition 1905), Mountbatten (June 3 Plan). 4 options.' },
+  { tag:'Modern — Socio-Religious',   inst:'MCQ: Reform movements — Brahmo Samaj (RRMR/Sati abolished 1829), Arya Samaj (Dayanand/Back to Vedas), Ramakrishna Mission (Vivekananda/Chicago 1893), Satyashodhak (Phule). 4 options.' },
+  { tag:'Modern — Acts & Reforms',    inst:'MCQ: Regulating Act 1773, Rowlatt Act 1919, Montagu-Chelmsford 1919 (Diarchy), Simon Commission 1927, Poona Pact 1932. Year precision tested. 4 options.' },
+  { tag:'Modern — Revolutionaries',   inst:'MCQ: Bhagat Singh/HSRA, Surya Sen/Chittagong Armoury Raid 1930, Bose/INA/Azad Hind Fauj, Ghadar Party 1913 San Francisco. 4 options.' },
+  { tag:'Polity — FR Articles',       inst:'MCQ: Specific Fundamental Right article — 14 (Equality), 19 (6 Freedoms), 21 (Life+Liberty), 32 (Right to Constitutional Remedies — Heart of Constitution). 4 options.' },
+  { tag:'Polity — DPSP & FD',         inst:'MCQ: DPSP (Art 36-51 — non-justiciable), Fundamental Duties (Art 51A — 11 duties, 42nd Amendment 1976). Distinguish which is DPSP vs FR. 4 options.' },
+  { tag:'Polity — Amendments',        inst:'MCQ: Key amendments — 42nd (Mini-Constitution 1976), 44th (Property 1978), 61st (voting age 18), 73rd/74th (Panchayati Raj 1992), 101st (GST 2016), 106th (Women Reservation). Year+content. 4 options.' },
+  { tag:'Polity — Schedules',         inst:'MCQ: 12 Schedules — which schedule covers what? (TEARS OF OLD PM mnemonic). Ask schedule number given content or vice versa. 4 options.' },
+  { tag:'Polity — Parliament',        inst:'MCQ: Lok Sabha (543 elected), Rajya Sabha (245), Money Bill (only LS), Joint Sitting (Art 108), Speaker role, Anti-Defection (10th Schedule). 4 options.' },
+  { tag:'Polity — Landmark Cases',    inst:'MCQ: Kesavananda Bharati 1973 (Basic Structure doctrine), Golak Nath 1967 (FR unamendable), Maneka Gandhi 1978, Minerva Mills 1980. What each established. 4 options.' },
+  { tag:'Polity — Constitutional Bodies', inst:'MCQ: CAG (Art 148), CEC (Art 324), UPSC (Art 315), Finance Commission (Art 280), Attorney General (Art 76) — article number, powers, tenure. 4 options.' },
+  { tag:'Geography — Rivers',         inst:'MCQ: River origin/tributaries/course. Narmada+Tapti flow west→estuary (NOT delta). Godavari=Dakshin Ganga. Brahmaputra=Tsangpo in Tibet. 4 options.' },
+  { tag:'Geography — Mountains & Passes', inst:'MCQ: Himalayan ranges (Siwalik/Lesser/Greater), highest peaks in India (Kanchenjunga), important passes (Nathu La/Rohtang/Zoji La/Shipki La). 4 options.' },
+  { tag:'Geography — Climate & Soils', inst:'MCQ: SW Monsoon mechanism, rain shadow, Mawsynram highest rainfall, or soil types (alluvial/black-regur/red-laterite/desert) — location+crop. 4 options.' },
+  { tag:'Geography — National Parks', inst:'MCQ: NP/sanctuary — Jim Corbett (first, Uttarakhand), Hemis (largest, Ladakh), South Button (smallest, A&N), Kaziranga (rhino), Gir (Asiatic lion). 4 options.' },
+  { tag:'Economy — Revolutions',      inst:'MCQ: Green (Borlaug/Swaminathan, Punjab-Haryana, wheat-rice), White (Verghese Kurien/Amul, Operation Flood), Blue (fish), Yellow (oilseeds). Head/year/place. 4 options.' },
+  { tag:'Economy — Committees',       inst:'MCQ: Narasimham Committee (Banking Reform), Tendulkar Committee (Poverty line), Kelkar Committee (Tax/Fiscal), Rangarajan (BOP crisis 1991). Purpose+recommendation. 4 options.' },
+  { tag:'Economy — Planning & NITI',  inst:'MCQ: Five Year Plans (1st→agriculture, 2nd→heavy industry/Mahalanobis model), Planning Commission replaced by NITI Aayog Jan 1 2015. Chair=PM, CEO=Nidhi Chhibber. 4 options.' },
+  { tag:'Economy — Budget & RBI',     inst:'MCQ: Union Budget 2025-26 (Capex ₹11.21L cr, 0% tax up to ₹4L, fiscal deficit 4.4%), RBI repo rate, MPC (6-member), inflation target 4% (±2%). 4 options.' },
+  { tag:'SSC JSO — Statistical Orgs', inst:'MCQ: NSO/MOSPI/NSSO — what each measures, Census 2011 key data (121 cr population/74.04% literacy/940 sex ratio), SRS/NFHS/PLFS surveys, SRS for birth-death rates. 4 options. SSC JSO specific.' },
+  { tag:'SSC JSO — Index Numbers',    inst:'MCQ: CPI (Consumer Price Index — base 2012), WPI (Wholesale), IIP (Index of Industrial Production — base 2011-12), GDP deflator. Which measures what. 4 options. SSC JSO specific.' },
+  { tag:'CA — Appointments 2024-25',  inst:'MCQ: Real 2024-2025 appointments — CJI (Sanjiv Khanna), RBI Governor (Sanjay Malhotra Dec 2024), Railway Board Chairman (Satish Kumar — first Dalit), ISRO Chief. 4 options.' },
+  { tag:'CA — Awards 2024-25',        inst:'MCQ: Bharat Ratna 2024 (Karpoori Thakur/LK Advani/PV Narasimha Rao/Charan Singh/MS Swaminathan), Padma Vibhushan 2026, Nobel 2025 (Peace: Maria Corina Machado). 4 options.' },
+  { tag:'CA — Summits 2024-25',       inst:'MCQ: G20 Brazil 2024 (Rio), BRICS Russia 2024 (Kazan), G20 South Africa 2025, BRICS India 2026 (18th summit), COP29 outcome. Host/outcome/India role. 4 options.' },
+  { tag:'CA — Schemes 2024-25',       inst:'MCQ: PM Surya Ghar Muft Bijli (Feb 2024), PM Vidyalaxmi (Nov 2024), Employment Linked Incentives (Budget 2024-25), PM Vishwakarma (Sept 2023). Ministry/target. 4 options.' },
+  { tag:'CA — Science & Space',       inst:'MCQ: Chandrayaan-3 South Pole landing Aug 2023, Aditya-L1 (Sun mission), Gaganyaan test updates, T20 WC 2026 India won (vs New Zealand, 96 runs, Bumrah PoM). 4 options.' },
+];
+
+// ─────────────────────────────────────────────
+//  MOD 10: RAILWAYS GK (RRB NTPC Graduate & Group D)
+//  Framework: Pure Anchor Card engine — direct recall, first/largest/founder style.
+//  No narrative depth. PYQ-repeat pattern favoured.
+// ─────────────────────────────────────────────
+const RRB_GK_POOL = [
+  { tag:'Railways — History & Firsts', inst:'MCQ: First train in India (1853, Bombay-Thane, 34 km, Lord Dalhousie era), Railway Budget merged with Union Budget 2017, first metro (Kolkata 1984), Vande Bharat launch. 4 options.' },
+  { tag:'Railways — Zones & HQ',      inst:'MCQ: Indian Railways zones (18 zones) — Central (Mumbai CST), Northern (New Delhi), Southern (Chennai), Eastern (Kolkata), Western (Mumbai Churchgate). 4 options.' },
+  { tag:'Railways — Tech & Projects', inst:'MCQ: Kavach ATP (Automatic Train Protection), bullet train project (Ahmedabad-Mumbai), dedicated freight corridors (Eastern/Western DFC), Amrit Bharat Station Scheme. 4 options.' },
+  { tag:'History — Firsts & Founders', inst:'MCQ: Simple associations — INC founded 1885 by AO Hume, Arya Samaj by Dayanand Saraswati, Brahmo Samaj by Raja Ram Mohan Roy, Ghadar Party 1913 San Francisco. 4 options. Direct factual.' },
+  { tag:'History — Freedom Struggle', inst:'MCQ: Key dates — 1857 revolt started Meerut, Quit India 1942 ("Do or Die"), Independence Aug 15 1947, Constitution adopted Nov 26 1949, Republic Day Jan 26 1950. 4 options.' },
+  { tag:'History — Ancient Basics',   inst:'MCQ: IVC sites (Harappa-Punjab Pakistan, Mohenjo-daro-Sindh Pakistan, Lothal-Gujarat India), Ashoka converted to Buddhism after Kalinga War 261BC, Gupta = Golden Age. 4 options.' },
+  { tag:'History — Modern Basics',    inst:'MCQ: First Viceroy (Lord Canning), Doctrine of Lapse (Dalhousie), Rowlatt Act 1919, Simon Commission 1927, Poona Pact 1932 (Gandhi-Ambedkar). 4 options.' },
+  { tag:'Geography — Capitals',       inst:'MCQ: Indian state capitals — especially recently changed ones, or capitals of neighboring countries (Nepal: Kathmandu, Sri Lanka: Colombo, Bangladesh: Dhaka). 4 options.' },
+  { tag:'Geography — Rivers',         inst:'MCQ: Longest river in India (Ganga), longest river in world (Nile or Amazon depending on definition), Brahmaputra = Tsangpo in Tibet, Indus originates Tibet. 4 options.' },
+  { tag:'Geography — First/Largest',  inst:'MCQ: First/Largest/Smallest in India — NP (Jim Corbett first, Hemis largest, South Button smallest), largest lake (Chilika saltwater, Wular freshwater), longest dam (Hirakud). 4 options.' },
+  { tag:'Geography — India Facts',    inst:'MCQ: Tropic of Cancer passes through 8 states (GJ/RJ/MP/CG/JH/WB/Tripura/Mizoram), southernmost point Indira Point (Andaman), longest coastline state Gujarat. 4 options.' },
+  { tag:'Polity — Constitution Basics', inst:'MCQ: Constitution adopted Nov 26 1949 (Constitution Day), enforced Jan 26 1950, total Articles (448+106 amendments), Schedules (12), Preamble words. 4 options.' },
+  { tag:'Polity — Key Articles',      inst:'MCQ: Art 14 (Equality), 19 (6 Freedoms), 21 (Right to Life), 32 (Right to Constitutional Remedies = Heart of Constitution/Ambedkar), 356 (President Rule). 4 options.' },
+  { tag:'Polity — Parliament Basics', inst:'MCQ: Lok Sabha max seats (552), elected (543), Rajya Sabha max (250), elected (238), President term (5 yrs), Rajya Sabha — no dissolution. 4 options.' },
+  { tag:'Science — Physics Factual',  inst:'MCQ: SI units (newton/joule/watt/pascal/ampere), laws of motion (Newton 1st=inertia/2nd=F=ma/3rd=action-reaction), speed of light (3×10⁸ m/s), sound fastest in solids. 4 options.' },
+  { tag:'Science — Chemistry Factual', inst:'MCQ: Chemical formulas (H₂O/NaCl/Fe₂O₃/NaHCO₃/H₂SO₄), pH scale (7=neutral, <7=acid, >7=base), rusting=oxidation, bleaching powder=calcium hypochlorite. 4 options.' },
+  { tag:'Science — Biology Factual',  inst:'MCQ: Vitamins (A=night blindness, C=scurvy, D=rickets, B12=pernicious anaemia), blood groups (A/B/AB/O, AB=universal recipient, O=universal donor), skin=largest organ. 4 options.' },
+  { tag:'Science — Disease Basics',   inst:'MCQ: Disease cause — malaria (Plasmodium/female Anopheles), dengue (Aedes aegypti), TB (Mycobacterium tuberculosis), cholera (Vibrio cholerae). 4 options.' },
+  { tag:'Computer — Hardware Basics', inst:'MCQ: CPU components (ALU+CU+Registers), RAM (volatile), ROM (non-volatile), HDD vs SSD, input (keyboard/mouse) vs output (monitor/printer) devices. 4 options. NTPC level.' },
+  { tag:'Computer — Internet Basics', inst:'MCQ: www vs internet, URL structure, HTTP vs HTTPS, browser (Chrome/Firefox), search engine, IP address, DNS (Domain Name System), Modem function. 4 options.' },
+  { tag:'CA — Sports',                inst:'MCQ: T20 WC 2026 India won (vs New Zealand, 96 runs, Bumrah PoM, hosted India+Sri Lanka), Paris Olympics 2024 India (Neeraj Chopra silver), Asian Games 2023. 4 options.' },
+  { tag:'CA — Awards Simple',         inst:'MCQ: Bharat Ratna 2024 recipients (5 awarded), Khel Ratna 2024 (Harmanpreet Singh-Hockey, Manu Bhaker-Shooting), Nobel Peace 2025 (Maria Corina Machado-Venezuela). 4 options.' },
+  { tag:'CA — Appointments Simple',   inst:'MCQ: RBI Governor (Sanjay Malhotra, Dec 2024), Railway Board Chairman (Satish Kumar, first Dalit, Sept 2024), ISRO Chairman (S. Somanath), CJI (Sanjiv Khanna). 4 options.' },
+  { tag:'GK — National Symbols',      inst:'MCQ: National animal (Bengal Tiger), bird (Indian Peacock), flower (Lotus), fruit (Mango), tree (Banyan/Ficus benghalensis), river (Ganga), aquatic animal (River Dolphin). 4 options.' },
+  { tag:'GK — Important Days',        inst:'MCQ: Republic Day Jan 26, Independence Day Aug 15, Gandhi Jayanti Oct 2 (International Non-Violence Day), Teachers Day Sep 5 (India), World Environment Day June 5. 4 options.' },
+  { tag:'GK — Dams & Rivers',         inst:'MCQ: Sardar Sarovar (Narmada/Gujarat), Bhakra Nangal (Sutlej/Punjab-HP), Hirakud (Mahanadi/Odisha — longest dam in India), Tehri (Bhagirathi/Uttarakhand — highest dam). 4 options.' },
+  { tag:'GK — Organizations',         inst:'MCQ: UN bodies (WHO/UNICEF/IMF/World Bank/WTO), India memberships (BRICS/SCO/G20/QUAD), or headquarters (ISRO=Bengaluru, DRDO=New Delhi, RBI=Mumbai). 4 options.' },
+];
+
+// ─────────────────────────────────────────────
+//  MOD 11: GUJARAT STATE GK
+//  GSSSB CCE Gr A/B, GPSC Class 1-2 (Forest RFO & GAS), Gujarat High Court
+//  Framework: Both engines — Narrative for Gujarat history/geography,
+//  Anchor Cards for Gujarat CA/appointments/schemes/literature.
+//  Explanations include Gujarat-specific narrative hooks.
+// ─────────────────────────────────────────────
+const GUJARAT_GK_POOL = [
+  { tag:'GJ — IVC Sites',              inst:'MCQ: Gujarat IVC sites — Lothal (world\'s first dockyard/tidal port, rice husks), Dholavira (unique 3-part city+water harvesting+10-letter signboard, UNESCO 2021), Rangpur. Specific features. 4 options.' },
+  { tag:'GJ — Ancient Dynasties',      inst:'MCQ: Maitraka dynasty (Vallabhi capital — centre of Buddhist learning, rivals Nalanda), Solanki/Chaulukya golden age (Modhera Sun Temple 1026 CE, Rani-ki-Vav, Rudra Mahalaya). 4 options.' },
+  { tag:'GJ — Medieval History',       inst:'MCQ: Ahmad Shah I (founded Ahmedabad 1411 on banks of Sabarmati, built Jama Masjid), Mahmud Begada (longest-reigning Gujarat Sultan, conquered Champaner+Junagadh, formidable mustache legend). 4 options.' },
+  { tag:'GJ — Gujarat Sultanate',      inst:'MCQ: Gujarat Sultanate rise (Zafar Khan/Muzaffar Shah I broke from Delhi 1407), Portuguese arrival at Surat (1509), fall to Akbar 1572 (Buland Darwaza built to celebrate Gujarat conquest). 4 options.' },
+  { tag:'GJ — Maratha & British GJ',   inst:'MCQ: Maratha Gaekwad dynasty (Baroda/Vadodara), Sayajirao Gaekwad III (progressive ruler — free compulsory education, library network, sent Ambedkar to Columbia), British control through Bombay Presidency. 4 options.' },
+  { tag:'GJ — Freedom Struggle',       inst:'MCQ: Gujarat satyagrahas — Kheda 1918 (peasant tax), Ahmedabad Mill Strike 1918 (Gandhi\'s first hunger strike), Bardoli Satyagraha 1928 (Vallabhbhai Patel got title Sardar), Dandi March 1930. 4 options.' },
+  { tag:'GJ — Post-Independence',      inst:'MCQ: Mahagujarat Movement (1956-1960 demand for separate state), Gujarat formed May 1 1960 (split from Bombay State), Sardar Patel birthplace (Nadiad), Gandhi birthplace (Porbandar), 2001 Bhuj earthquake. 4 options.' },
+  { tag:'GJ — Districts & Cities',     inst:'MCQ: Kutch (largest district in India by area), Surat (diamond cutting+textile), Vadodara/Baroda (Baroda Museum, Maharaja Sayajirao University), Rajkot (Gandhi spent childhood). 4 options.' },
+  { tag:'GJ — Rivers',                 inst:'MCQ: Gujarat rivers — Sabarmati (Ahmedabad/Gandhinagar), Mahi (Gulf of Khambhat), Narmada (Sardar Sarovar Dam), Tapti/Tapi. Narmada+Tapti flow WEST, form estuaries NOT deltas. 4 options.' },
+  { tag:'GJ — Coastline & Gulf',       inst:'MCQ: Gujarat has longest coastline in India (~1600 km), Gulf of Kutch (Marine National Park — first in India), Gulf of Khambhat (tidal bore), Rann of Kutch (White Desert, flamingos). 4 options.' },
+  { tag:'GJ — National Parks Wildlife',inst:'MCQ: Gir National Park (Asiatic Lions — only wild habitat in world), Marine NP Gulf of Kutch (first marine NP in India 1982), Blackbuck NP Velavadar, Wild Ass Sanctuary Little Rann, Vansda NP. 4 options.' },
+  { tag:'GJ — Forest & Environment',   inst:'MCQ: Gujarat forest cover (~9% — among lowest of major states), Wild Ass (endangered), Great Indian Bustard (critically endangered, also Desert NP Rajasthan), Sardar Sarovar displacement, mangroves in Kutch. 4 options. RFO level.' },
+  { tag:'GJ — Economy & Industry',     inst:'MCQ: Surat processes 90%+ of world\'s diamonds (not mined here — imported rough, cut+polished), Anand/Amul (White Revolution/cooperative dairy model), Jamnagar (Reliance refinery — world\'s largest at single location), GIFT City (India\'s first IFSC). 4 options.' },
+  { tag:'GJ — Ports & Connectivity',   inst:'MCQ: Kandla/Deendayal Port (largest cargo tonnage port in India), Mundra Port (largest private port in India, Adani), Dahej, Hazira (LNG terminal), India-Middle East-Europe corridor relevance. 4 options.' },
+  { tag:'GJ — Art & Culture',          inst:'MCQ: Garba (UNESCO Intangible Heritage 2023 — Navratri), Dandiya, Bhavai (folk drama+pot balancing dance), Patola (double-ikat silk saree from Patan), Bandhani (tie-dye, Kutch/Jamnagar). 4 options.' },
+  { tag:'GJ — Festivals',              inst:'MCQ: Navratri (Garba, 9 nights), Rann Utsav (Kutch White Desert, Nov-Feb, tourism), Uttarayan/Kite Festival (Jan 14, Makar Sankranti), Modhera Dance Festival (at Sun Temple, Jan). 4 options.' },
+  { tag:'GJ — Monuments & Heritage',   inst:'MCQ: Rani-ki-Vav Patan (UNESCO 2014, stepwell, on ₹100 note, 11th century Solanki), Modhera Sun Temple (1026 CE, Bhimdev I Solanki), Champaner-Pavagadh (UNESCO 2004), Dholavira (UNESCO 2021 Harappan). 4 options.' },
+  { tag:'GJ — Literature Classical',   inst:'MCQ: Narmad/Narmadashankar Dave (pioneer modern Gujarati, wrote state anthem Jai Jai Garvi Gujarat), KM Munshi (Patan ni Prabhuta/Gujarat no Nath historical novels), Pannalal Patel (Manvini Bhavai — Jnanpith Award). 4 options.' },
+  { tag:'GJ — Literature Modern',      inst:'MCQ: Govardhanram Tripathi (Saraswatichandra — 4 volume epic novel), Gandhi (Satya na Prayogo/My Experiments with Truth + Hind Swaraj), Dileep Jhaveri (Sahitya Akademi 2024, Bhagwan-ni Vato poetry). 4 options.' },
+  { tag:'GJ — Sahitya Akademi Awards', inst:'MCQ: Gujarati Sahitya Akademi — Dileep Jhaveri (2024, Bhagwan-ni Vato), Vinod Joshi (2023, Sairandhri), Rinku Rathod (Yuva Puraskar 2024, ...To Tame Raaji? ghazals), Kirtida Brahmbhatt (Bal Sahitya 2025, Tinchak). 4 options.' },
+  { tag:'GJ — State Polity & Admin',   inst:'MCQ: Gujarat Vidhan Sabha (182 seats, unicameral), Rajya Sabha seats (11), High Court (Ahmedabad, established 1960), total districts (33), capital Gandhinagar (planned city, named after Gandhi). 4 options.' },
+  { tag:'GJ — High Court & Judiciary', inst:'MCQ: Gujarat High Court jurisdiction (original+appellate), Chief Justice appointment (President+CJI+State Governor consultation), Gujarat HC established 1960, district courts hierarchy, writ jurisdiction. 4 options. HC Assistant/DySO level.' },
+  { tag:'GJ — Panchayati Raj',         inst:'MCQ: Gujarat Panchayati Raj — 3-tier (Gram Panchayat/Taluka Panchayat/District Panchayat), Gram Sabha powers, Nagarpalika (municipality), AMC/SMC (Ahmedabad/Surat Municipal Corporation), Gujarat Panchayats Act 1993. 4 options.' },
+  { tag:'GJ — State Schemes & CA',     inst:'MCQ: Gujarat-specific schemes — Mukhyamantri Amrutum (MA) Yojana (health insurance poor), MYSY scholarship, i-Khedut portal (farmers), Vibrant Gujarat Summit (biannual investor meet), GIFT City IFSC development. 4 options.' },
+  { tag:'GJ — GPSC Level National GK', inst:'MCQ: National GK at GPSC Class 1-2 depth — polity/history/economy/geography question where Gujarat connection exists OR UPSC Prelims difficulty question. Tricky distractors, statement-based traps. 4 options.' },
+];
+
+// ─────────────────────────────────────────────
+//  MOD 12: RAJASTHAN STATE GK (RSMSSB Jr Computer Instructor/Anudeshak focus)
+//  Framework: Dual domain — Computer knowledge (Anchor Cards for specs/shortcuts)
+//  + Rajasthan GK (Narrative for history, Anchor Cards for CA/awards/literature).
+//  Computer questions = 40%, Rajasthan GK = 60%.
+// ─────────────────────────────────────────────
+const RAJASTHAN_GK_POOL = [
+  { tag:'Computer — Hardware',          inst:'MCQ: Hardware components — CPU (ALU+CU+Registers), RAM (volatile/temporary), ROM (non-volatile/permanent), HDD vs SSD vs Pen Drive, Motherboard, GPU. Input vs output vs storage devices. 4 options. Computer Instructor level.' },
+  { tag:'Computer — Software & OS',     inst:'MCQ: Software types (system/application/utility), OS functions (process management/memory management/file management), Windows features, file extensions (.docx/.xlsx/.pptx/.pdf/.exe/.jpg). 4 options.' },
+  { tag:'Computer — MS Word',           inst:'MCQ: MS Word — formatting shortcuts (Ctrl+B bold/Ctrl+I italic/Ctrl+U underline/Ctrl+Z undo/Ctrl+S save), mail merge, page orientation, word count, track changes, styles. 4 options.' },
+  { tag:'Computer — MS Excel',          inst:'MCQ: MS Excel — functions (SUM/AVERAGE/COUNT/COUNTA/MAX/MIN/IF/VLOOKUP), cell referencing (relative A1/absolute $A$1/mixed), charts, pivot table basics, freeze panes. 4 options.' },
+  { tag:'Computer — MS PowerPoint',     inst:'MCQ: MS PowerPoint — slide layouts, transitions vs animations, slide show (F5), design themes, master slide, handout, notes view, SmartArt, picture formatting. 4 options.' },
+  { tag:'Computer — Internet & Network', inst:'MCQ: Internet concepts (www vs internet, URL/URI, HTTP/HTTPS/FTP, IP address/DNS/DHCP), network types (LAN/WAN/MAN/PAN), browser (Chrome/Firefox/Edge), email protocols (SMTP/POP3/IMAP). 4 options.' },
+  { tag:'Computer — Number Systems',    inst:'MCQ: Number system conversions (Binary↔Decimal↔Octal↔Hexadecimal), binary arithmetic, 1\'s complement, 2\'s complement, ASCII code (A=65, a=97, 0=48). 4 options.' },
+  { tag:'Computer — Database & Data',   inst:'MCQ: DBMS concepts (table/record/field/primary key/foreign key), DDL vs DML vs DCL, types (relational/hierarchical/network), data types (integer/varchar/date), storage units (bit→byte→KB→MB→GB→TB). 4 options.' },
+  { tag:'Computer — Programming & Logic', inst:'MCQ: Algorithm (steps to solve problem), flowchart symbols (oval=start/stop, rectangle=process, diamond=decision, parallelogram=I/O), programming paradigms, compiler vs interpreter vs assembler, logic gates (AND/OR/NOT/NAND/NOR). 4 options.' },
+  { tag:'Computer — Cybersecurity',     inst:'MCQ: Computer threats (virus/worm/trojan/spyware/ransomware), antivirus, firewall (hardware+software), encryption basics (symmetric vs asymmetric), phishing vs vishing vs smishing, strong password rules. 4 options.' },
+  { tag:'RJ — Rajput Clans & Capitals', inst:'MCQ: Rajput clans and capitals — Guhilas/Sisodias (Mewar, Chittorgarh/Udaipur), Kachwahas (Amber then Jaipur), Rathores (Marwar, Jodhpur), Chauhans (Ajmer/Shakambhari), Hadas (Bundi/Kota). 4 options.' },
+  { tag:'RJ — Prithviraj & Tarain',     inst:'MCQ: Prithviraj Chauhan — 1st Battle of Tarain 1191 (defeated Muhammad Ghori), 2nd Battle of Tarain 1192 (Prithviraj captured+killed, Ghori established Muslim rule in India), Chand Bardai wrote Prithviraj Raso. 4 options.' },
+  { tag:'RJ — Mewar & Maharana Pratap', inst:'MCQ: Maharana Pratap — Battle of Haldighati 1576 (vs Akbar\'s forces led by Man Singh, fought in Khamnor/Gogunda area), Chetak (horse), Bhama Shah (donated treasury), never surrendered to Mughals. 4 options.' },
+  { tag:'RJ — Rana Sanga & Mughal',     inst:'MCQ: Rana Sanga (Rana Sangram Singh of Mewar) — Battle of Khanwa 1527 vs Babur, Babur used artillery/gun powder (decisive advantage), Chittorgarh sieges (1303 Alauddin/1535 Humayun/1568 Akbar). 4 options.' },
+  { tag:'RJ — Bhakti Saints & Folk Deities', inst:'MCQ: Rajasthan Bhakti — Mirabai (Krishna devotee, from Merta Nagaur, Meera Bai), Dadu Dayal (Jaipur, nirgun bhakti). Folk deities — Ramdev ji (Pokhran), Gogaji (Hanumangarh), Tejaji (Nagaur), Pabuji (Barmer). 4 options.' },
+  { tag:'RJ — Modern & Freedom Struggle', inst:'MCQ: 1857 revolt center in Rajasthan (Nasirabad cantonment first, also Neemuch, Erinpura), Bijolia Peasant Movement (longest non-violent peasant struggle, against feudal levies), Praja Mandal movements (democratic rights in princely states). 4 options.' },
+  { tag:'RJ — Integration (7 Stages)', inst:'MCQ: Rajasthan integration in 7 stages 1948-1956 — Matsya Union (1st stage: Alwar+Bharatpur+Karauli+Dholpur, March 1948), Greater Rajasthan (4th stage, Jaipur+Jodhpur+Bikaner+Jaisalmer), final state Nov 1 1956. 4 options.' },
+  { tag:'RJ — Geography & Thar',       inst:'MCQ: Rajasthan geography — Thar/Great Indian Desert (largest hot desert in India, 2nd largest in Asia), Aravallis (oldest fold mountains in India, run SW-NE), Guru Shikhar (highest peak in Rajasthan, Mt Abu, Sirohi). 4 options.' },
+  { tag:'RJ — Rivers',                 inst:'MCQ: Rajasthan rivers — Luni (saline river, drains into Rann of Kutch, no outlet to sea — internal drainage), Chambal (perennial, badland/ravine topography, shared with MP+UP), Banas (tributary of Chambal). 4 options.' },
+  { tag:'RJ — National Parks & Wildlife', inst:'MCQ: Ranthambore NP (tigers, Sawai Madhopur), Sariska Tiger Reserve (Alwar — first to have tigers reintroduced), Keoladeo Ghana NP/Bharatpur (migratory birds, UNESCO), Desert NP (Great Indian Bustard, Sam, Jaisalmer). 4 options.' },
+  { tag:'RJ — Forts & Architecture',   inst:'MCQ: Chittorgarh Fort (largest fort in India, symbol of Rajput pride+Jauhar), Kumbhalgarh Fort (Mewar, second longest wall in world after Great Wall of China), Amer Fort (Jaipur, Hindu-Muslim blend, Kachwaha), Mehrangarh (Jodhpur). 4 options.' },
+  { tag:'RJ — Art, Dance & Craft',     inst:'MCQ: Rajasthan dances — Kalbelia (UNESCO Intangible Heritage 2010, snake charmer community, Jaisalmer), Ghoomar (state dance, Bhil tribe then Rajput women, circular), Terah Taali (Kamad community, 13 cymbals). 4 options.' },
+  { tag:'RJ — Festivals',              inst:'MCQ: Pushkar Mela (world\'s largest camel fair, Kartik Purnima November, Ajmer district), Gangaur (Parvati worship, married+unmarried women, March-April), Teej (monsoon festival, July-August, swing+new clothes). 4 options.' },
+  { tag:'RJ — Literature',             inst:'MCQ: Chand Bardai (Prithviraj Raso — first major work in Hindi/Braj/Rajasthani), Kanhaiyalal Sethia (Patal aur Pithal, Dharti Dhoran Ri), Vijaydan Detha/Bijji (Batan ri Phulwari — 14 vol folk tales). 4 options.' },
+  { tag:'RJ — Sahitya Akademi Awards', inst:'MCQ: Rajasthani Sahitya Akademi — Mukut Maniraj (Sahitya Akademi 2024, Gaon Ar Amma poetry), Gaje Singh Rajpurohit (2023, Palakati Preet), Poonam Chand Godara (Yuva 2025, Antas re Aanganai), Bhogilal Patidar (Bal Sahitya 2025). 4 options.' },
+  { tag:'RJ — IVC Sites',              inst:'MCQ: Rajasthan IVC — Kalibangan (Hanumangarh district: ploughed fields/fire altars/pre-Harappan+Harappan settlement, on river Ghaggar=ancient Saraswati), Bairat/Viratnagar (Alwar: Ashokan edicts, Buddhist monastery). 4 options.' },
+  { tag:'RJ — State Polity & Admin',   inst:'MCQ: Rajasthan Vidhan Sabha (200 seats, unicameral), Rajya Sabha seats (10), High Court (Jodhpur — principal seat, Jaipur — permanent bench), total districts (50 after 2023 reorganization, earlier 33). 4 options.' },
+  { tag:'RJ — Education & NEP',        inst:'MCQ: RTE Act 2009 (free+compulsory education 6-14 years, 25% reservation private schools), NEP 2020 key points (5+3+3+4 structure, coding from Class 6, mother tongue emphasis), NCERT vs SCERT role. 4 options. Computer Instructor exam relevant.' },
+  { tag:'RJ — CA State Specific',      inst:'MCQ: Recent Rajasthan CA (2024-2025) — BJP government Dec 2023 (CM Bhajanlal Sharma), Rajasthan Budget, new industrial projects, state-level awards, or national event with Rajasthan angle. 4 options.' },
+  { tag:'National GK — RPSC Level',    inst:'MCQ: National GK at RPSC/RSMSSB level — Indian history, polity, geography, economy. Prefer questions where Rajasthan connection exists. SSC CGL difficulty range. 4 options.' },
 ];
 
 // MOD 9: GATE CS
@@ -604,60 +732,88 @@ function saveSettings() {
 }
 
 // ─────────────────────────────────────────────
-//  SYSTEM PROMPTS  — dense, imperative, no filler
-//
-//  JSON_SCHEMA is defined once and referenced by all 10 prompts.
-//  ~45 tokens vs the original ~90 tokens. (-50%)
+//  SYSTEM PROMPTS
+//  JSON_SCHEMA defined once, referenced by all prompts.
+//  All 4 GK sub-modules reflect the finalized framework:
+//  - Explanations follow: Why correct + Why each wrong option fails + One exam hook
+//  - This mirrors the Anchor Card format: Fact → Hook → Why Exam Asks
 // ─────────────────────────────────────────────
 const JSON_SCHEMA = `JSON only, no fences. \\n for newlines, \\" for quotes, no LaTeX. Limits: problem≤140w, explanation≤110w, hint≤35w, answer≤80w. MCQ: A-D options in problem field on separate lines. Never put answer in problem. Schema:{"topic":"","problem":"","hint":"","answer":"","explanation":""}`;
 
 function getSysPrompt(modId, lvl) {
   const d = Math.round(lvl);
-  // Each prompt is compressed ~45-55% vs original.
-  const prompts = [
 
-// 0 — Brain Teasers  (~40 tokens vs ~120)
-`Puzzle master. NO exercise/workout content. 50% theoretical (riddles/lateral/chess/wordplay), 50% numerical (series/combinatorics/geometry/deduction). Type given in user msg — follow exactly. Diff ${d}/10.
+  const map = {
+
+// 0 — Brain Teasers
+0: `Puzzle master. NO exercise/workout content. 50% theoretical (riddles/lateral/chess/wordplay), 50% numerical (series/combinatorics/geometry/deduction). Type given in user msg — follow exactly. Diff ${d}/10.
 ${JSON_SCHEMA}`,
 
-// 1 — SQL  (~70 tokens vs ~150)
-`SQL analytics tutor, diff ${d}/10. Always: CREATE TABLE+INSERT 5-6 rows, then business analytics question. Answer=working SQL+inline comments. Scale: 1-3→SELECT/WHERE/GROUP BY/HAVING; 4-6→JOINs/subqueries/CTEs; 7-10→window fns (ROW_NUMBER,LAG,RANK,running totals,FIRST_VALUE). Focus: cohort, funnel, YoY, top-N, moving avg, retention. 80% applied, 20% theory.
+// 1 — SQL
+1: `SQL analytics tutor, diff ${d}/10. Always: CREATE TABLE+INSERT 5-6 rows, then business analytics question. Answer=working SQL+inline comments. Scale: 1-3→SELECT/WHERE/GROUP BY/HAVING; 4-6→JOINs/subqueries/CTEs; 7-10→window fns (ROW_NUMBER,LAG,RANK,running totals,FIRST_VALUE). Focus: cohort, funnel, YoY, top-N, moving avg, retention. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 2 — Excel  (~60 tokens vs ~130)
-`Excel analytics tutor, diff ${d}/10. Always: data table 4-6 rows (| sep)+analytics task. Answer=exact formula/M-code+computed result. Scale: 1-2→SUM/IF; 3-4→VLOOKUP/SUMIFS; 5-6→INDEX-MATCH/XLOOKUP; 7-8→FILTER/SORT/UNIQUE/LAMBDA/LET; 9-10→Power Query/Pivot calculated fields. 80% applied, 20% theory.
+// 2 — Excel
+2: `Excel analytics tutor, diff ${d}/10. Always: data table 4-6 rows (| sep)+analytics task. Answer=exact formula/M-code+computed result. Scale: 1-2→SUM/IF; 3-4→VLOOKUP/SUMIFS; 5-6→INDEX-MATCH/XLOOKUP; 7-8→FILTER/SORT/UNIQUE/LAMBDA/LET; 9-10→Power Query/Pivot calculated fields. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 3 — Data Visualisation  (~65 tokens vs ~140)
-`BI tutor (Power BI+Tableau), diff ${d}/10. Alternate Power BI (DAX) and Tableau (LOD) each problem. Always: business scenario+table 3-4 sample rows, then specific measure/visual task. Answer=complete DAX measure OR Tableau LOD/table-calc expression. Scale: 1-3→SUM/AVG; 4-5→CALCULATE/FILTER/ALL or FIXED LOD; 6-7→time intelligence/INCLUDE/EXCLUDE; 8-10→RANKX/TOPN/RLS/complex table calcs. 80% applied, 20% theory.
+// 3 — Data Visualisation
+3: `BI tutor (Power BI+Tableau), diff ${d}/10. Alternate Power BI (DAX) and Tableau (LOD) each problem. Always: business scenario+table 3-4 sample rows, then specific measure/visual task. Answer=complete DAX measure OR Tableau LOD/table-calc expression. Scale: 1-3→SUM/AVG; 4-5→CALCULATE/FILTER/ALL or FIXED LOD; 6-7→time intelligence/INCLUDE/EXCLUDE; 8-10→RANKX/TOPN/RLS/complex table calcs. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 4 — Python  (~75 tokens vs ~160)
-`Python data analytics tutor, diff ${d}/10. ONLY real analyst tasks (Pandas, NumPy, Matplotlib, Sklearn) — NO pure algo/competitive problems. Always: scenario+sample DataFrame as dict/list, analytics question, 2 expected outputs. Problem field=question+input only, no solution code. Answer=working Python 3. Scale: 1-3→filter/groupby; 4-5→merge/reshape/datetime; 6-7→EDA/outlier/correlation; 8-10→viz/ML basics/ETL. 80% applied, 20% theory.
+// 4 — Python
+4: `Python data analytics tutor, diff ${d}/10. ONLY real analyst tasks (Pandas, NumPy, Matplotlib, Sklearn) — NO pure algo/competitive problems. Always: scenario+sample DataFrame as dict/list, analytics question, 2 expected outputs. Problem field=question+input only, no solution code. Answer=working Python 3. Scale: 1-3→filter/groupby; 4-5→merge/reshape/datetime; 6-7→EDA/outlier/correlation; 8-10→viz/ML basics/ETL. 80% applied, 20% theory.
 ${JSON_SCHEMA}`,
 
-// 5 — Quant Aptitude  (~55 tokens vs ~120)
-`Quant aptitude tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. 1-5: SSC/Railway level. 6-10: CAT/UPSC multi-step shortcut mastery. Topic+method in user msg — follow exactly. Word problem, Indian context, specific numbers. MCQ RULES: EXACTLY ONE question, 4 options A-D in problem field, answer=letter+numeric+working (shortcut preferred). Never two separate MCQ blocks.
+// 5 — Quant Aptitude
+5: `Quant aptitude tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. 1-5: SSC/Railway level. 6-10: CAT/UPSC multi-step shortcut mastery. Topic+method in user msg — follow exactly. Word problem, Indian context, specific numbers. MCQ RULES: EXACTLY ONE question, 4 options A-D in problem field, answer=letter+numeric+working (shortcut preferred). Never two separate MCQ blocks.
 ${JSON_SCHEMA}`,
 
-// 6 — LR & DI  (~55 tokens vs ~120)
-`LR+DI tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. Type in user msg — follow exactly. Syllogism: definite conclusions only. Seating: unique solution required. DI: Indian data table (5-6 rows, | sep), EXACTLY ONE analytical question. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+step-by-step reasoning.
+// 6 — LR & DI
+6: `LR+DI tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. Type in user msg — follow exactly. Syllogism: definite conclusions only. Seating: unique solution required. DI: Indian data table (5-6 rows, | sep), EXACTLY ONE analytical question. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+step-by-step reasoning.
 ${JSON_SCHEMA}`,
 
-// 7 — General Science  (~50 tokens vs ~110)
-`General Science tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. Phy+Chem: 90% numerical, topic in user msg. Bio: factual MCQ only. MCQ RULES: ONE question, 4 options A-D in problem field. Phy answer: formula→substitution→result+units. Chem: equation+calc. Bio: correct fact+why each wrong option is incorrect.
+// 7 — General Science
+7: `General Science tutor (SSC/Railway/GPSC/RPSC), diff ${d}/10. Phy+Chem: 90% numerical, topic in user msg. Bio: factual MCQ only. MCQ RULES: ONE question, 4 options A-D in problem field. Phy answer: formula→substitution→result+units. Chem: equation+calc. Bio: correct fact+why each wrong option is incorrect.
 ${JSON_SCHEMA}`,
 
-// 8 — Current Affairs & GK  (~55 tokens vs ~120)
-`CA+GK MCQ tutor (UPSC/GPSC/RPSC/SSC), diff ${d}/10. 100% factual — no numericals. Topic in user msg. CA: events 2023-2025 ONLY; prefer most recent. Static GK: frequently tested facts, occasional surprising nuance. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+key fact. Explanation=why correct+why each other wrong.
+// 8 — UPSC & SSC GK (SSC JSO focus)
+// Framework applied: Narrative engine for Static GK bedrock, Anchor Card engine for CA topsoil.
+// Explanations: Fact (why correct) + Hook (why each wrong fails) + Exam pattern tip.
+// Scale: 1-4=SSC CHSL/MTS, 5-7=SSC CGL/JSO, 8-10=UPSC Prelims depth with statement traps.
+8: `CA+GK MCQ tutor (UPSC Prelims+SSC CGL/CHSL/JSO level), diff ${d}/10. 100% factual MCQ. Topic in user msg. CA: 2024-2025 events only, prefer most recent. Static GK: frequently tested facts. SSC JSO: statistical organisations (NSO/MOSPI/NSSO)/Census/index numbers when tagged. Scale: 1-4=simple direct recall; 5-7=SSC CGL precision (exact years/names/article numbers); 8-10=UPSC-style statement traps (90% correct statement with one word wrong, or "which of following is NOT correct"). MCQ RULES: ONE question, 4 options A-D in problem field. Answer=correct letter+key fact. Explanation=why correct+why each wrong option fails+ONE exam insight (common confusion pattern or memory hook — e.g. "examiners confuse 1909 Morley-Minto with 1919 Diarchy").
 ${JSON_SCHEMA}`,
 
-// 9 — GATE CS  (~45 tokens vs ~100)
-`GATE CS tutor, diff ${d}/10. NUMERICAL/APPLIED only — no pure definitions. Topic+method in user msg. GATE PYQ style. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+complete step-by-step solution (all intermediate values).
+// 9 — GATE CS
+9: `GATE CS tutor, diff ${d}/10. NUMERICAL/APPLIED only — no pure definitions. Topic+method in user msg. GATE PYQ style. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=letter+complete step-by-step solution (all intermediate values).
 ${JSON_SCHEMA}`,
 
-  ];
-  return prompts[modId];
+// 10 — Railways GK (RRB NTPC Graduate & Group D)
+// Framework: Pure Anchor Card engine. Direct recall, first/largest/founder style.
+// No narrative depth needed. PYQ repeat pattern dominates.
+// Scale: 1-4=Group D (very simple/direct), 5-7=NTPC Graduate (moderate), 8-10=NTPC with tricky distractors.
+10: `CA+GK MCQ tutor (RRB NTPC Graduate+Group D level), diff ${d}/10. SIMPLE factual MCQ — direct recall, no deep analysis needed. Topic in user msg. Railway-specific tags: always include Indian Railways facts. Prefer first/largest/smallest/founder/year type questions — these dominate RRB papers. CA: last 6-12 months only, major events (WC winner/Bharat Ratna/ISRO milestone/Bhajanlal). Scale: 1-4=Group D (capitals/symbols/basic science); 5-7=NTPC Graduate (moderate precision); 8-10=NTPC tricky distractors (e.g. Nile vs Amazon longest, Chilika vs Wular largest freshwater lake). MCQ RULES: ONE question, 4 options A-D in problem field. Answer=correct letter+brief fact. Explanation=why correct+why the 2 most-confusing wrong options fail (keep simple, exam-focused). No complex analysis.
+${JSON_SCHEMA}`,
+
+// 11 — Gujarat State GK (GSSSB CCE Gr A/B, GPSC Forest RFO & GAS, Gujarat HC)
+// Framework: Both engines together.
+// Narrative hooks in explanations (Gujarat's geographic/historical story).
+// Anchor Cards for CA/awards/literature/schemes.
+// Scale: 1-3=GSSSB Clerk, 4-6=GSSSB CCE Gr A/B, 7-10=GPSC Class 1-2/HC level.
+11: `Gujarat State GK MCQ tutor (GSSSB CCE Gr A/B+GPSC Class 1-2 Forest RFO/GAS+Gujarat HC Assistant/DySO level), diff ${d}/10. 100% factual MCQ. Topic in user msg. PRIORITY: Gujarat-specific knowledge — history/geography/economy/culture/literature/polity. Scale: 1-3=GSSSB Clerk (direct Gujarat facts); 4-6=GSSSB CCE (precise Gujarat+national GK); 7-10=GPSC/HC level (tricky distractors, UPSC-style statement traps, RFO ecology questions, HC procedural questions). Always include Gujarat context in explanations. MCQ RULES: ONE question, 4 options A-D in problem field. Answer=correct letter+key fact+Gujarat context. Explanation=why correct+why others wrong+one narrative hook connecting the fact to Gujarat's geographic/historical story (e.g. "Gujarat's arid interior explains why Surat became a trade hub rather than an agrarian centre").
+${JSON_SCHEMA}`,
+
+// 12 — Rajasthan State GK (RSMSSB Jr Computer Instructor/Anudeshak)
+// Framework: Dual domain — Computer Anchor Cards (exact specs/shortcuts/formulas)
+// + Rajasthan Narrative GK (history story + precision dates).
+// Computer questions = 40%, Rajasthan GK = 60% of pool.
+// Scale: 1-4=basic computer+simple Rajasthan, 5-7=Jr Computer Instructor standard, 8-10=advanced topics.
+12: `Rajasthan State GK+Computer Basics MCQ tutor (RSMSSB Jr Computer Instructor/Anudeshak+RPSC level), diff ${d}/10. 100% factual MCQ. Topic in user msg. TWO domains: (A) Computer topics (hardware/software/MS Office/internet/networking/number systems/programming/cybersecurity) — follow inst exactly for computer tags; (B) Rajasthan GK (history/geography/culture/literature/polity/education). CA: Rajasthan state-specific 2024-25 or major national CA. Scale: 1-4=basic computer+simple Rajasthan history; 5-7=Jr Computer Instructor standard precision; 8-10=advanced OS/networking OR tricky Rajasthan history (e.g. exact Battle of Tarain year/Rajput succession/7 stages of integration). MCQ RULES: ONE question, 4 options A-D in problem field. Answer=correct letter+fact. Explanation=why correct+why others wrong+one exam memory tip (e.g. "Kalbelia got UNESCO recognition in 2010, a decade before Garba got it in 2023 — examiners test which got it first").
+${JSON_SCHEMA}`,
+
+  };
+
+  return map[modId] || map[0];
 }
 
 // ─────────────────────────────────────────────
@@ -676,17 +832,19 @@ function pickTopicInstruction(modId) {
 
   let pool;
   switch (modId) {
-    case 0: pool = BRAIN_POOL;   break;
-    case 5: pool = QUANT_POOL;   break;
-    case 6: pool = LR_POOL;      break;
-    case 7: pool = SCIENCE_POOL; break;
-    case 8: pool = GK_POOL;      break;
-    case 9: pool = GATE_POOL;    break;
+    case 0:  pool = BRAIN_POOL;          break;
+    case 5:  pool = QUANT_POOL;          break;
+    case 6:  pool = LR_POOL;             break;
+    case 7:  pool = SCIENCE_POOL;        break;
+    case 8:  pool = UPSC_SSC_GK_POOL;   break;
+    case 9:  pool = GATE_POOL;           break;
+    case 10: pool = RRB_GK_POOL;        break;
+    case 11: pool = GUJARAT_GK_POOL;    break;
+    case 12: pool = RAJASTHAN_GK_POOL;  break;
     default: return '';
   }
 
   const item = pickFromPool(pool, recentTags);
-  // Keep avoid-list compact: just tags, no verbose preamble
   return `\nType:[${item.tag}] ${item.inst}\nAvoid recent:[${banned}]`;
 }
 
@@ -707,7 +865,7 @@ const nextSetting = () => { const s = SETTINGS_POOL[settingIdx % SETTINGS_POOL.l
 
 function strongSeed() {
   const r = crypto.getRandomValues(new Uint32Array(2));
-  return `${r[0].toString(36)}-${r[1].toString(36)}`;  // shorter than full Date.now() + perf
+  return `${r[0].toString(36)}-${r[1].toString(36)}`;
 }
 
 function pickDifficulty(base) {
@@ -716,10 +874,9 @@ function pickDifficulty(base) {
   return Math.min(10, Math.max(1, b + delta));
 }
 
-// buildUserMsg — trimmed ~35% vs original
 function buildUserMsg(modId, diff, topicInst) {
   const h    = getHistory(modId);
-  const sigs = h.signatureLog.slice(-4).join('|') || 'none';  // was 5, reduced to 4
+  const sigs = h.signatureLog.slice(-4).join('|') || 'none';
   const ctx  = (modId >= 1 && modId <= 4) ? ` Ctx:${nextSetting()}.` : '';
   const seed = Math.floor(Math.random()*9000+1000);
   return `Diff:${diff}/10.${ctx} Seed:${seed}. Avoid patterns:[${sigs}]. Entropy:${strongSeed()}${topicInst}`;
@@ -784,8 +941,6 @@ function problemLeaksAnswer(p) {
 
 // ─────────────────────────────────────────────
 //  API CALL
-//  maxTokens reduced: generation 1800 (was 2400), eval 500 (was 700)
-//  slim() applied to both system prompt and user message before sending.
 // ─────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -794,8 +949,6 @@ async function callAI(systemPrompt, userMsg, maxTokens = 1800) {
   const key      = localStorage.getItem('dph_apiKey') || '';
   const def      = PROVIDERS[provider];
   const model    = (localStorage.getItem('dph_model')||'').trim() || def.model;
-
-  // Apply slim() to strip any residual filler before the strings hit the wire
   const sysSlim  = slim(systemPrompt);
   const userSlim = slim(userMsg);
 
@@ -836,17 +989,6 @@ async function callAI(systemPrompt, userMsg, maxTokens = 1800) {
 // ─────────────────────────────────────────────
 //  MCQ RENDERING
 // ─────────────────────────────────────────────
-// Returns only lines that are NOT A-D option lines
-function extractQuestionStem(text) {
-  if (!text) return '';
-  return text.replace(/\\n/g,'\n')
-    .split('\n')
-    .filter(line => !line.trim().match(/^[A-Da-d]\s*[\)\.\:\-]\s*.+/))
-    .join('\n')
-    .trim();
-}
-
-// Returns only the question stem lines (filters out A-D option lines)
 function extractQuestionStem(text) {
   if (!text) return '';
   return text.replace(/\\n/g,'\n')
@@ -912,7 +1054,7 @@ function showScreen(name) {
 }
 
 // ─────────────────────────────────────────────
-//  HOME
+//  HOME — renders modules grouped by section
 // ─────────────────────────────────────────────
 function renderHome() {
   S = loadState();
@@ -920,26 +1062,51 @@ function renderHome() {
     new Date().toLocaleDateString('en-IN', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
   document.getElementById('stat-streak').textContent = S.streak;
   document.getElementById('stat-solved').textContent = S.attempts.reduce((a,b)=>a+b, 0);
-  document.getElementById('stat-mods').textContent   = S.attempts.filter(a=>a>0).length + '/10';
+  document.getElementById('stat-mods').textContent   = S.attempts.filter(a=>a>0).length + '/' + MODULES.length;
 
   const grid = document.getElementById('module-grid');
   grid.innerHTML = '';
+
+  // Group modules by section
+  const sections = {};
   MODULES.forEach(m => {
-    const lvl = Math.round(S.levels[m.id]);
-    const att = S.attempts[m.id];
-    const avg = att ? Math.round(S.scores[m.id] / att) : null;
-    const card = document.createElement('div');
-    card.className = 'mod-card';
-    card.style.setProperty('--mod-accent',       m.accent);
-    card.style.setProperty('--mod-accent-light',  m.accent + '18');
-    card.innerHTML = `
-      <div class="emoji">${m.emoji}</div>
-      <div class="mod-name">${m.name}</div>
-      <div class="mod-sub">${m.sub}</div>
-      <span class="mod-badge">Lvl ${lvl} · ${getLevelLabel(lvl)}</span>
-      <div class="mod-stats">${att > 0 ? att + ' solved · ' + avg + '% avg' : 'Not started yet'}</div>`;
-    card.onclick = () => startModule(m);
-    grid.appendChild(card);
+    if (!sections[m.section]) sections[m.section] = [];
+    sections[m.section].push(m);
+  });
+
+  // Section display order
+  const sectionOrder = ['Core Skills', 'Aptitude & Reasoning', 'GK & Current Affairs'];
+
+  sectionOrder.forEach(sectionName => {
+    if (!sections[sectionName]) return;
+    const sLabel = document.createElement('div');
+    sLabel.className = 'mod-section-label';
+    sLabel.textContent = sectionName;
+    grid.appendChild(sLabel);
+
+    const sGrid = document.createElement('div');
+    sGrid.className = 'module-grid';
+    sGrid.style.padding = '8px 0 4px';
+
+    sections[sectionName].forEach(m => {
+      const lvl = Math.round(S.levels[m.id]);
+      const att = S.attempts[m.id];
+      const avg = att ? Math.round(S.scores[m.id] / att) : null;
+      const card = document.createElement('div');
+      card.className = 'mod-card';
+      card.style.setProperty('--mod-accent',      m.accent);
+      card.style.setProperty('--mod-accent-light', m.accent + '18');
+      card.innerHTML = `
+        <div class="emoji">${m.emoji}</div>
+        <div class="mod-name">${m.name}</div>
+        <div class="mod-sub">${m.sub}</div>
+        <span class="mod-badge">Lvl ${lvl} · ${getLevelLabel(lvl)}</span>
+        <div class="mod-stats">${att > 0 ? att + ' solved · ' + avg + '% avg' : 'Not started yet'}</div>`;
+      card.onclick = () => startModule(m);
+      sGrid.appendChild(card);
+    });
+
+    grid.appendChild(sGrid);
   });
 }
 
@@ -988,7 +1155,6 @@ async function generateProblem() {
   const sysPrompt  = getSysPrompt(currentMod.id, diff);
   const userMsg    = buildUserMsg(currentMod.id, diff, topicInst);
 
-  // Show estimated token count in the topbar badge
   const estimatedTokens = estTokens(slim(sysPrompt) + slim(userMsg));
   document.getElementById('prob-token-meter').textContent = `~${estimatedTokens} tkns`;
 
@@ -1016,8 +1182,6 @@ async function generateProblem() {
     const isMcq  = MCQ_MODULES.has(currentMod.id);
     document.getElementById('prob-topic').textContent = parsed.topic;
     const stmt = document.getElementById('prob-statement');
-    // MCQ modules: show ONLY the question stem here.
-    // A-D options go exclusively to the interactive MCQ box — prevents double-rendering.
     if (isMcq) {
       const stem = extractQuestionStem(parsed.problem);
       stmt.textContent = stem || parsed.problem;
@@ -1027,7 +1191,7 @@ async function generateProblem() {
     stmt.className   = isCode ? 'code-text' : 'problem-text';
     document.getElementById('hint-box').textContent = parsed.hint;
     document.getElementById('answer-input').style.fontFamily = isCode ? 'var(--mono)' : 'var(--font)';
-    renderMcqOptions(parsed.problem); // pass full text so parser finds A-D lines
+    renderMcqOptions(parsed.problem);
 
     document.getElementById('prob-loading').style.display = 'none';
     document.getElementById('prob-content').style.display = 'block';
@@ -1063,7 +1227,6 @@ function handleKey(e) { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submi
 
 // ─────────────────────────────────────────────
 //  SUBMISSION & EVALUATION
-//  EVAL_PROMPT compressed ~45% vs original. maxTokens 500 (was 700).
 // ─────────────────────────────────────────────
 const EVAL_PROMPT = `Evaluate student answers. Partial credit OK. Return JSON only:{"correct":bool,"score":0-100,"verdict":"Correct|Partially Correct|Incorrect","feedback":"2-3 sentences on right/wrong","tip":"one key lesson"}`;
 
@@ -1080,7 +1243,6 @@ async function submitAnswer() {
   document.getElementById('fb-error').style.display    = 'none';
 
   try {
-    // Eval user message is dynamic content — slim() strips any stray filler from student answers too
     const evalUserMsg = slim(
       `Module:${currentMod.name}\nProblem:${currentProblem.problem}\nCorrect:${currentProblem.answer}\nStudent:${ans}`
     );
